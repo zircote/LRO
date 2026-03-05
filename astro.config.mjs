@@ -1,9 +1,13 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import rehypeMermaid from "rehype-mermaid";
 
 export default defineConfig({
   site: "https://zircote.com",
   base: "/LRO",
+  markdown: {
+    rehypePlugins: [[rehypeMermaid, { strategy: "img-svg" }]],
+  },
   integrations: [
     starlight({
       title: "LRO Paper",
