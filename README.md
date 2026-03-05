@@ -22,23 +22,23 @@ This work is produced by an independent researcher without formal institutional 
 ```
 LRO/
 ├── paper/
-│   ├── LRO-paper.md        # Main paper
-│   ├── specification.md     # Formal specification
-│   └── references.md        # Bibliography
-├── CITATION.cff             # Citation metadata
-├── CONTRIBUTING.md          # How to contribute
-├── CODE_OF_CONDUCT.md       # Community guidelines
-└── LICENSE                  # CC BY 4.0
+│ ├── LRO-paper.md # Main paper
+│ ├── specification.md # Formal specification
+│ └── references.md # Bibliography
+├── CITATION.cff # Citation metadata
+├── CONTRIBUTING.md # How to contribute
+├── CODE_OF_CONDUCT.md # Community guidelines
+└── LICENSE # CC BY 4.0
 ```
 
 ## Providing Feedback
 
 Feedback is welcome and encouraged:
 
-- **General feedback** — Use the [Feedback issue template](../../issues/new?template=feedback.yml)
-- **Error reports / corrections** — Use the [Errata issue template](../../issues/new?template=errata.yml)
-- **Collaboration proposals** — Use the [Collaboration issue template](../../issues/new?template=collaboration.yml)
-- **Open discussion** — Visit [GitHub Discussions](../../discussions)
+- **General feedback**. Use the [Feedback issue template](../../issues/new?template=feedback.yml)
+- **Error reports / corrections**. Use the [Errata issue template](../../issues/new?template=errata.yml)
+- **Collaboration proposals**. Use the [Collaboration issue template](../../issues/new?template=collaboration.yml)
+- **Open discussion**. Visit [GitHub Discussions](../../discussions)
 
 ## Citation
 
@@ -46,10 +46,10 @@ If you reference this work, please use the citation metadata provided in [CITATI
 
 ```bibtex
 @misc{zircote2026lro,
-  title   = {Large Result Offloading: Demand-Driven Context Management for Tool-Augmented Language Models},
-  author  = {zircote},
-  year    = {2026},
-  url     = {https://zircote.com/LRO}
+ title = {Large Result Offloading: Demand-Driven Context Management for Tool-Augmented Language Models},
+ author = {zircote},
+ year = {2026},
+ url = {https://zircote.com/LRO}
 }
 ```
 

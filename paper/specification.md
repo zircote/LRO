@@ -24,17 +24,17 @@ LRO operates at the **MCP transport layer**, intercepting tool results after the
 
 ```mermaid
 flowchart LR
-    A[Tool Call] --> B[Service Layer]
-    B --> C[Result Set]
-    C --> D{LRO Interceptor}
-    D -->|below threshold| E[Inline Response]
-    D -->|above threshold| F[Write JSONL]
-    F --> G[Build OffloadResponse]
-    G --> H[Return descriptor to LLM]
+ A[Tool Call] --> B[Service Layer]
+ B --> C[Result Set]
+ C --> D{LRO Interceptor}
+ D -->|below threshold| E[Inline Response]
+ D -->|above threshold| F[Write JSONL]
+ F --> G[Build OffloadResponse]
+ G --> H[Return descriptor to LLM]
 
-    style D fill:#f9f,stroke:#333,stroke-width:2px
-    style E fill:#9f9,stroke:#333
-    style H fill:#9f9,stroke:#333
+ style D fill:#f9f,stroke:#333,stroke-width:2px
+ style E fill:#9f9,stroke:#333
+ style H fill:#9f9,stroke:#333
 ```
 
 > **Normative:** The LRO interceptor MUST NOT alter the service layer's return types or interfaces. `PromptIntegration::inject_context` continues to return `Result<String>`. `RecallService::recall` continues to return `Result<Vec<SearchHit>>`. The interceptor operates on the serialized MCP tool response, not on the Rust types.
@@ -45,7 +45,7 @@ The MCP server spec declares `taskSupport: "optional"` for `recall_memories` and
 
 ### Relationship to Pagination
 
-LRO and [Paginated Recall](/atlatl-spec/specification/paginated-recall) are complementary mechanisms that address the same problem — large result sets — through different strategies. When both are available, LRO takes precedence: if the total result set exceeds the offload threshold, the server offloads the full result set to a JSONL file and returns an `OffloadResponse`. Pagination cursors are **not** returned in this case because the agent can access the complete data via the JSONL file.
+LRO and [Paginated Recall](/atlatl-spec/specification/paginated-recall) are complementary mechanisms that address the same problem. large result sets. through different strategies. When both are available, LRO takes precedence: if the total result set exceeds the offload threshold, the server offloads the full result set to a JSONL file and returns an `OffloadResponse`. Pagination cursors are **not** returned in this case because the agent can access the complete data via the JSONL file.
 
 > **Sequencing:** LRO threshold evaluation occurs on the initial request before any pagination cursor is created. If the LRO interceptor activates, no cursor is created and the server returns an `OffloadResponse`. A result set MUST NOT simultaneously be offloaded to JSONL and have an active pagination cursor.
 
@@ -53,7 +53,7 @@ Pagination applies when:
 - LRO is disabled (`prompt.offload.enabled = false`), or
 - The result set falls below the LRO threshold.
 
-See [Paginated Recall — Interaction with LRO](/atlatl-spec/specification/paginated-recall#interaction-with-lro) for the complete composition rules and comparison matrix.
+See [Paginated Recall. Interaction with LRO](/atlatl-spec/specification/paginated-recall#interaction-with-lro) for the complete composition rules and comparison matrix.
 
 ## Threshold Detection
 
@@ -97,30 +97,30 @@ The first line is a metadata header conforming to `OffloadHeader`:
 /// Metadata header written as the first line of an offloaded JSONL file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OffloadHeader {
-    /// Marker identifying this as an LRO header. Always `"lro_header"`.
-    #[serde(rename = "type")]
-    pub header_type: String,
+ /// Marker identifying this as an LRO header. Always `"lro_header"`.
+ #[serde(rename = "type")]
+ pub header_type: String,
 
-    /// The operation that produced these results: "recall", "search", "inject", or "list".
-    pub operation: String,
+ /// The operation that produced these results: "recall", "search", "inject", or "list".
+ pub operation: String,
 
-    /// The query string (if applicable).
-    pub query: Option<String>,
+ /// The query string (if applicable).
+ pub query: Option<String>,
 
-    /// Total number of memory lines following the header.
-    pub count: usize,
+ /// Total number of memory lines following the header.
+ pub count: usize,
 
-    /// MIF schema version of the memory objects.
-    pub schema_version: String,
+ /// MIF schema version of the memory objects.
+ pub schema_version: String,
 
-    /// ISO 8601 timestamp of when the file was written.
-    pub timestamp: String,
+ /// ISO 8601 timestamp of when the file was written.
+ pub timestamp: String,
 
-    /// Estimated total tokens of the result set.
-    pub estimated_tokens: usize,
+ /// Estimated total tokens of the result set.
+ pub estimated_tokens: usize,
 
-    /// Detail level used for serialization.
-    pub detail: String,
+ /// Detail level used for serialization.
+ pub detail: String,
 }
 ```
 
@@ -153,17 +153,17 @@ Where:
 /// Represents an offloaded result file.
 #[derive(Debug, Clone)]
 pub struct OffloadedResult {
-    /// Absolute path to the JSONL file.
-    pub path: PathBuf,
+ /// Absolute path to the JSONL file.
+ pub path: PathBuf,
 
-    /// Header metadata.
-    pub header: OffloadHeader,
+ /// Header metadata.
+ pub header: OffloadHeader,
 
-    /// Time-to-live for this file. After expiry, custodial cleanup MAY delete it.
-    pub ttl: Duration,
+ /// Time-to-live for this file. After expiry, custodial cleanup MAY delete it.
+ pub ttl: Duration,
 
-    /// When this file was created.
-    pub created_at: DateTime<Utc>,
+ /// When this file was created.
+ pub created_at: DateTime<Utc>,
 }
 ```
 
@@ -177,53 +177,53 @@ The LLM receives this descriptor as the tool result and uses its own capabilitie
 /// Compact response returned when results are offloaded to JSONL.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OffloadResponse {
-    /// Indicates this is an offloaded result.
-    pub offloaded: bool,
+ /// Indicates this is an offloaded result.
+ pub offloaded: bool,
 
-    /// Summary of the result set.
-    pub summary: OffloadSummary,
+ /// Summary of the result set.
+ pub summary: OffloadSummary,
 
-    /// Absolute path to the JSONL file.
-    pub file_path: String,
+ /// Absolute path to the JSONL file.
+ pub file_path: String,
 
-    /// JSON Schema describing each memory line in the JSONL file.
-    pub line_schema: serde_json::Value,
+ /// JSON Schema describing each memory line in the JSONL file.
+ pub line_schema: serde_json::Value,
 
-    /// Ready-to-use jq recipes for common extraction patterns.
-    pub jq_recipes: Vec<JqRecipe>,
+ /// Ready-to-use jq recipes for common extraction patterns.
+ pub jq_recipes: Vec<JqRecipe>,
 
-    /// Usage guidance for the AI assistant.
-    pub guidance: String,
+ /// Usage guidance for the AI assistant.
+ pub guidance: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OffloadSummary {
-    /// Total number of memories in the file.
-    pub count: usize,
+ /// Total number of memories in the file.
+ pub count: usize,
 
-    /// Estimated total tokens saved by offloading.
-    pub estimated_tokens: usize,
+ /// Estimated total tokens saved by offloading.
+ pub estimated_tokens: usize,
 
-    /// The operation that was performed.
-    pub operation: String,
+ /// The operation that was performed.
+ pub operation: String,
 
-    /// Top namespaces represented (up to 5).
-    pub top_namespaces: Vec<String>,
+ /// Top namespaces represented (up to 5).
+ pub top_namespaces: Vec<String>,
 
-    /// Score range (min, max) if applicable.
-    pub score_range: Option<(f64, f64)>,
+ /// Score range (min, max) if applicable.
+ pub score_range: Option<(f64, f64)>,
 
-    /// Detail level used for serialization.
-    pub detail: String,
+ /// Detail level used for serialization.
+ pub detail: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JqRecipe {
-    /// Human-readable description of what this recipe does.
-    pub description: String,
+ /// Human-readable description of what this recipe does.
+ pub description: String,
 
-    /// The jq command to execute.
-    pub command: String,
+ /// The jq command to execute.
+ pub command: String,
 }
 ```
 
@@ -235,12 +235,12 @@ Implementations MUST include exactly 10 recipes in every `OffloadResponse`. Reci
 
 | # | Description | Command |
 |---|-------------|---------|
-| 1 | List titles with namespaces | `tail -n +2 {file} \| jq -r '[.title, .namespace] \| @tsv'` |
+| 1 | List titles with namespaces | `tail -n +2 {file} \| jq -r '[.title,.namespace] \| @tsv'` |
 | 2 | Filter by namespace prefix | `tail -n +2 {file} \| jq 'select(.namespace \| startswith("_semantic"))'` |
 | 3 | Search titles by keyword | `tail -n +2 {file} \| jq 'select(.title \| test("keyword"; "i"))'` |
 | 4 | Extract IDs and titles only | `tail -n +2 {file} \| jq '{id, title, namespace}'` |
 | 5 | Filter by memory type | `tail -n +2 {file} \| jq 'select(.memory_type == "semantic")'` |
-| 6 | Count by namespace | `tail -n +2 {file} \| jq -s 'group_by(.namespace) \| map({namespace: .[0].namespace, count: length})'` |
+| 6 | Count by namespace | `tail -n +2 {file} \| jq -s 'group_by(.namespace) \| map({namespace:.[0].namespace, count: length})'` |
 | 7 | Filter by tag | `tail -n +2 {file} \| jq 'select(.tags \| index("TAG"))'` |
 | 8 | Sort by created date | `tail -n +2 {file} \| jq -s 'sort_by(.created)'` |
 
@@ -288,25 +288,25 @@ The `inject_context` MCP tool composes `RecallService` and `PromptIntegration` t
 
 ```mermaid
 flowchart TD
-    A[Operation completes] --> B[Estimate total tokens at requested detail level]
-    B --> C{tokens > threshold?}
-    C -->|No| D[Return inline response]
-    C -->|Yes| E[Write JSONL to temp file]
-    E --> F[Build OffloadResponse]
-    F --> G[Include summary + jq recipes + guidance]
-    G --> H[Return OffloadResponse as tool result]
+ A[Operation completes] --> B[Estimate total tokens at requested detail level]
+ B --> C{tokens > threshold?}
+ C -->|No| D[Return inline response]
+ C -->|Yes| E[Write JSONL to temp file]
+ E --> F[Build OffloadResponse]
+ F --> G[Include summary + jq recipes + guidance]
+ G --> H[Return OffloadResponse as tool result]
 
-    H --> I{LLM decides next action}
-    I -->|Needs subset| J[LLM runs jq recipe via shell tool]
-    J --> K[Filtered data enters conversation]
-    I -->|Needs full file| L[LLM reads file directly]
-    I -->|Summary sufficient| M[LLM proceeds with summary only]
+ H --> I{LLM decides next action}
+ I -->|Needs subset| J[LLM runs jq recipe via shell tool]
+ J --> K[Filtered data enters conversation]
+ I -->|Needs full file| L[LLM reads file directly]
+ I -->|Summary sufficient| M[LLM proceeds with summary only]
 
-    style C fill:#f9f,stroke:#333,stroke-width:2px
-    style D fill:#9f9,stroke:#333
-    style K fill:#9f9,stroke:#333
-    style L fill:#9f9,stroke:#333
-    style M fill:#9f9,stroke:#333
+ style C fill:#f9f,stroke:#333,stroke-width:2px
+ style D fill:#9f9,stroke:#333
+ style K fill:#9f9,stroke:#333
+ style L fill:#9f9,stroke:#333
+ style M fill:#9f9,stroke:#333
 ```
 
 ## Cleanup and Lifecycle
@@ -349,10 +349,10 @@ LRO configuration lives under the `[prompt.offload]` section:
 
 ```toml
 [prompt.offload]
-enabled = true                          # Enable/disable LRO globally
-threshold_tokens = 1600                 # Token threshold for offloading
-ttl_seconds = 3600                      # File TTL (1 hour default)
-output_dir = ""                         # Empty = system temp dir
+enabled = true # Enable/disable LRO globally
+threshold_tokens = 1600 # Token threshold for offloading
+ttl_seconds = 3600 # File TTL (1 hour default)
+output_dir = "" # Empty = system temp dir
 ```
 
 | Key | Type | Default | Description |
@@ -387,20 +387,20 @@ For deployments **without** a proxy, the original constraint still applies: stre
 
 ### Local LRO Proxy for Remote Servers
 
-Implementations MAY provide a lightweight local MCP server (via stdio transport) whose sole responsibility is materializing LRO files on the local filesystem on behalf of a remote HTTP-based atlatl server. This pattern enables a centralized memory system — where all memory storage, search, and enrichment run on a shared remote server — while preserving the local file access that LRO's jq-based extraction workflow requires.
+Implementations MAY provide a lightweight local MCP server (via stdio transport) whose sole responsibility is materializing LRO files on the local filesystem on behalf of a remote HTTP-based atlatl server. This pattern enables a centralized memory system. where all memory storage, search, and enrichment run on a shared remote server. while preserving the local file access that LRO's jq-based extraction workflow requires.
 
 ```mermaid
 flowchart LR
-    A[LLM Client] -->|stdio| B[Local LRO Proxy]
-    B -->|streamable-http| C[Remote Atlatl Server]
-    C -->|full result set| B
-    B -->|write JSONL locally| D[Local Filesystem]
-    B -->|OffloadResponse with local path| A
-    A -->|jq recipes via shell| D
+ A[LLM Client] -->|stdio| B[Local LRO Proxy]
+ B -->|streamable-http| C[Remote Atlatl Server]
+ C -->|full result set| B
+ B -->|write JSONL locally| D[Local Filesystem]
+ B -->|OffloadResponse with local path| A
+ A -->|jq recipes via shell| D
 
-    style B fill:#f9f,stroke:#333,stroke-width:2px
-    style C fill:#bbf,stroke:#333
-    style D fill:#9f9,stroke:#333
+ style B fill:#f9f,stroke:#333,stroke-width:2px
+ style C fill:#bbf,stroke:#333
+ style D fill:#9f9,stroke:#333
 ```
 
 The local LRO proxy operates as follows:
@@ -423,12 +423,12 @@ A local LRO proxy (or any stdio-based MCP server with access to the offloaded fi
 
 ```mermaid
 flowchart LR
-    A[LLM Client] -->|"extract(file, recipe)"| B[Local MCP Server]
-    B -->|read + filter| C[Local JSONL File]
-    B -->|filtered results| A
+ A[LLM Client] -->|"extract(file, recipe)"| B[Local MCP Server]
+ B -->|read + filter| C[Local JSONL File]
+ B -->|filtered results| A
 
-    style B fill:#f9f,stroke:#333,stroke-width:2px
-    style C fill:#9f9,stroke:#333
+ style B fill:#f9f,stroke:#333,stroke-width:2px
+ style C fill:#9f9,stroke:#333
 ```
 
 An implementation MAY provide an `lro_extract` tool (or equivalent) with the following semantics:
@@ -467,7 +467,7 @@ Available recipes: 1=titles+namespaces, 2=filter namespace, 3=search titles,
 9=detail-adaptive, 10=detail-adaptive.
 ```
 
-> **Normative:** The guidance prompt is generated by the tool itself — the implementation that provides `lro_extract` owns the prompt content. This ensures the guidance accurately reflects the tool's actual parameter interface, available recipes, and any implementation-specific extensions. The `OffloadResponse.guidance` field carries this native prompt; the LLM receives it as part of the tool result and requires no prior knowledge of the extraction tool's existence.
+> **Normative:** The guidance prompt is generated by the tool itself. the implementation that provides `lro_extract` owns the prompt content. This ensures the guidance accurately reflects the tool's actual parameter interface, available recipes, and any implementation-specific extensions. The `OffloadResponse.guidance` field carries this native prompt; the LLM receives it as part of the tool result and requires no prior knowledge of the extraction tool's existence.
 
 Because the guidance is self-describing, the LLM discovers the extraction capability at the moment it receives an offloaded result. No MCP initialization handshake or capability negotiation is required beyond the tool being listed in the server's tool manifest.
 

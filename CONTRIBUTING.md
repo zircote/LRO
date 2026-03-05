@@ -8,9 +8,9 @@ Thank you for your interest in contributing to this research. This document outl
 
 Use the GitHub Issue templates to submit structured feedback:
 
-- **[General Feedback](../../issues/new?template=feedback.yml)** — Comments, suggestions, or questions about any section of the paper.
-- **[Errata / Corrections](../../issues/new?template=errata.yml)** — Report factual errors, typos, or inaccuracies.
-- **[Collaboration Requests](../../issues/new?template=collaboration.yml)** — Propose joint work, extensions, or related research.
+- **[General Feedback](../../issues/new?template=feedback.yml)**. Comments, suggestions, or questions about any section of the paper.
+- **[Errata / Corrections](../../issues/new?template=errata.yml)**. Report factual errors, typos, or inaccuracies.
+- **[Collaboration Requests](../../issues/new?template=collaboration.yml)**. Propose joint work, extensions, or related research.
 
 ### Proposing Corrections or Improvements
 

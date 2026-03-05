@@ -32,11 +32,11 @@ The experiment addresses six questions, each corresponding to a core LRO assumpt
 
 1. Instrument the LRO interceptor to log every offloaded result set and every subsequent extraction query executed against it.
 2. For each offloaded file, record:
-   - `n`: total records in the file (from `OffloadHeader.count`)
-   - `k`: distinct records accessed by the agent (union of records returned by all extraction queries the agent executes against the file)
-   - `task_type`: classification of the originating task (e.g., "question answering", "summary generation", "memory management", "debugging")
-   - `operation`: the MCP tool that triggered offloading (`recall_memories`, `inject_context`, `list_memories`, search)
-   - `detail_level`: Light, Medium, or Full
+ - `n`: total records in the file (from `OffloadHeader.count`)
+ - `k`: distinct records accessed by the agent (union of records returned by all extraction queries the agent executes against the file)
+ - `task_type`: classification of the originating task (e.g., "question answering", "summary generation", "memory management", "debugging")
+ - `operation`: the MCP tool that triggered offloading (`recall_memories`, `inject_context`, `list_memories`, search)
+ - `detail_level`: Light, Medium, or Full
 3. Run a minimum of 200 instrumented sessions across at least 4 task categories, using at least 2 distinct LLM models (e.g., Claude Sonnet, GPT-4o).
 4. For each session, the agent operates normally against a seeded memory store containing 500-2000 memories spanning 5+ namespaces.
 
@@ -65,10 +65,10 @@ The experiment addresses six questions, each corresponding to a core LRO assumpt
 **Method.**
 
 1. Define a task suite of 50 memory retrieval tasks with known correct answers. Tasks should span:
-   - **Lookup tasks** (retrieve a specific memory by criteria): 15 tasks
-   - **Aggregation tasks** (count, group, or rank memories): 15 tasks
-   - **Synthesis tasks** (combine information from multiple memories): 10 tasks
-   - **Filtering tasks** (select a subset matching complex criteria): 10 tasks
+ - **Lookup tasks** (retrieve a specific memory by criteria): 15 tasks
+ - **Aggregation tasks** (count, group, or rank memories): 15 tasks
+ - **Synthesis tasks** (combine information from multiple memories): 10 tasks
+ - **Filtering tasks** (select a subset matching complex criteria): 10 tasks
 
 2. For each task, seed a memory store with 200-500 memories, of which 3-20 are relevant to the task. The correct answer is deterministic given the seeded data.
 
@@ -91,10 +91,10 @@ The experiment addresses six questions, each corresponding to a core LRO assumpt
 4. Each task x condition combination runs 3 times (to account for LLM non-determinism), using temperature 0 where supported.
 
 5. Evaluate each run on:
-   - **Correctness**: binary (correct/incorrect) against the known answer
-   - **Tokens consumed**: total context tokens used during the task
-   - **Tool calls**: number of shell/file tool invocations the agent makes
-   - **Time to answer**: wall-clock time from task prompt to final answer
+ - **Correctness**: binary (correct/incorrect) against the known answer
+ - **Tokens consumed**: total context tokens used during the task
+ - **Tool calls**: number of shell/file tool invocations the agent makes
+ - **Time to answer**: wall-clock time from task prompt to final answer
 
 **Metrics.**
 
@@ -132,12 +132,12 @@ The experiment addresses six questions, each corresponding to a core LRO assumpt
 | 12,800 | ~83 records | Very conservative; LRO rarely activates |
 
 2. For each tau value, record:
-   - Offload activation rate (fraction of tasks where LRO triggers)
-   - Task completion rate
-   - Median tokens consumed
-   - Materialization overhead (file write time)
+ - Offload activation rate (fraction of tasks where LRO triggers)
+ - Task completion rate
+ - Median tokens consumed
+ - Materialization overhead (file write time)
 
-3. Additionally, run a sweep with adaptive threshold: tau_adaptive = min(tau_base, 0.10 * remaining_context_tokens). This tests the paper's suggestion (Section 5.4) that context-dependent thresholds may outperform static ones.
+3. Also run a sweep with adaptive threshold: tau_adaptive = min(tau_base, 0.10 * remaining_context_tokens). This tests the paper's suggestion (Section 5.4) that context-dependent thresholds may outperform static ones.
 
 **Metrics.**
 
@@ -216,26 +216,26 @@ The experiment addresses six questions, each corresponding to a core LRO assumpt
 **Method.**
 
 1. Instrument the LRO interceptor with high-resolution timers at each stage:
-   - `t_serialize`: time to serialize result set to JSONL string
-   - `t_write`: time to write JSONL file to disk
-   - `t_descriptor`: time to build the OffloadResponse (summary, schema, recipes)
-   - `t_total_lro`: total LRO overhead (`t_serialize + t_write + t_descriptor`)
+ - `t_serialize`: time to serialize result set to JSONL string
+ - `t_write`: time to write JSONL file to disk
+ - `t_descriptor`: time to build the OffloadResponse (summary, schema, recipes)
+ - `t_total_lro`: total LRO overhead (`t_serialize + t_write + t_descriptor`)
 
 2. Instrument the MCP response path to measure:
-   - `t_inline`: time to serialize and return an inline response (no-LRO path)
-   - `t_response`: total time from operation completion to MCP response delivery
+ - `t_inline`: time to serialize and return an inline response (no-LRO path)
+ - `t_response`: total time from operation completion to MCP response delivery
 
 3. Measure inference-side timing:
-   - `t_inference_lro`: time from MCP response receipt to agent's first action (with LRO descriptor)
-   - `t_inference_inline`: time from MCP response receipt to agent's first action (with full inline result)
-   - `t_extraction`: time for each extraction query execution (jq pipeline)
-   - `t_task_total`: end-to-end wall-clock time per task
+ - `t_inference_lro`: time from MCP response receipt to agent's first action (with LRO descriptor)
+ - `t_inference_inline`: time from MCP response receipt to agent's first action (with full inline result)
+ - `t_extraction`: time for each extraction query execution (jq pipeline)
+ - `t_task_total`: end-to-end wall-clock time per task
 
 4. Run profiling across result set sizes: n = {25, 50, 100, 250, 500, 1000} records.
 
 5. Run on two storage configurations:
-   - Local SSD (typical development environment)
-   - Network-attached storage (simulating shared filesystem deployments)
+ - Local SSD (typical development environment)
+ - Network-attached storage (simulating shared filesystem deployments)
 
 **Metrics.**
 
@@ -264,24 +264,24 @@ The experiment addresses six questions, each corresponding to a core LRO assumpt
 **Method.**
 
 1. Using the instrumented sessions from E1, log every extraction query the agent executes against offloaded files. For each query, record:
-   - `derivation_type`: one of `verbatim | parameterized | adapted | composed | novel` (see classification step 3 below)
-   - `source_recipe_id`: recipe ID(s) the query derives from, or `null` for `novel` queries
-   - `query_text`: the resolved jq filter expression applied to the file (for `lro_extract` invocations, the value of the `query` parameter; for shell-based extraction, the full shell command)
-   - `result_size`: number of records returned by the query
-   - `task_context`: the agent's stated reason for the extraction (from the preceding reasoning step, if available)
+ - `derivation_type`: one of `verbatim | parameterized | adapted | composed | novel` (see classification step 3 below)
+ - `source_recipe_id`: recipe ID(s) the query derives from, or `null` for `novel` queries
+ - `query_text`: the resolved jq filter expression applied to the file (for `lro_extract` invocations, the value of the `query` parameter; for shell-based extraction, the full shell command)
+ - `result_size`: number of records returned by the query
+ - `task_context`: the agent's stated reason for the extraction (from the preceding reasoning step, if available)
 
-2. Additionally, run a controlled experiment with two conditions:
-   - **Recipe condition**: agent receives the standard 10-recipe library
-   - **No-recipe condition**: agent receives the file path and schema but no recipes (condition C2 from E2)
+2. Also run a controlled experiment with two conditions:
+ - **Recipe condition**: agent receives the standard 10-recipe library
+ - **No-recipe condition**: agent receives the file path and schema but no recipes (condition C2 from E2)
 
-   In the no-recipe condition, log every extraction command the agent formulates independently.
+ In the no-recipe condition, log every extraction command the agent formulates independently.
 
 3. Classify each extraction query in both conditions against the standard recipe library:
-   - **Verbatim**: the agent invoked a recipe exactly as provided, without any modification
-   - **Parameterized**: the agent invoked a recipe with substituted argument values — either via `lro_extract(recipe=N, params={...})` or by replacing filter literals in a shell jq command — without altering operators or pipeline structure
-   - **Adapted**: the query is structurally based on a standard recipe but modifies operators, adds or removes pipeline stages, or combines fields beyond what the recipe specifies. Queries that pipeline multiple recipes and modify at least one are classified as Adapted.
-   - **Composed**: the query pipelines two or more standard recipes without altering either recipe's operators
-   - **Novel**: the query requires capabilities or structure not expressible from the standard library
+ - **Verbatim**: the agent invoked a recipe exactly as provided, without any modification
+ - **Parameterized**: the agent invoked a recipe with substituted argument values. either via `lro_extract(recipe=N, params={...})` or by replacing filter literals in a shell jq command. without altering operators or pipeline structure
+ - **Adapted**: the query is structurally based on a standard recipe but modifies operators, adds or removes pipeline stages, or combines fields beyond what the recipe specifies. Queries that pipeline multiple recipes and modify at least one are classified as Adapted.
+ - **Composed**: the query pipelines two or more standard recipes without altering either recipe's operators
+ - **Novel**: the query requires capabilities or structure not expressible from the standard library
 
 When classification is performed by human raters, inter-rater reliability SHOULD achieve κ ≥ 0.80 on a calibration set of 50 pre-labeled queries before full classification begins.
 
@@ -336,11 +336,11 @@ Implementations SHOULD provide a `LroExperimentLogger` that captures all metrics
 Event types:
 
 ```
-lro.offload           - LRO activation (n, estimated_tokens, tau, detail_level, file_path)
-lro.extraction        - Agent extraction query (derivation_type, source_recipe_id, query_text, result_size, file_path)
-lro.access_complete   - Session summary (n, k, k/n, task_type, operation)
-lro.timing            - Timing checkpoint (stage, duration_us)
-lro.inline_fallback   - LRO not triggered; inline response returned (n, estimated_tokens, tau)
+lro.offload - LRO activation (n, estimated_tokens, tau, detail_level, file_path)
+lro.extraction - Agent extraction query (derivation_type, source_recipe_id, query_text, result_size, file_path)
+lro.access_complete - Session summary (n, k, k/n, task_type, operation)
+lro.timing - Timing checkpoint (stage, duration_us)
+lro.inline_fallback - LRO not triggered; inline response returned (n, estimated_tokens, tau)
 ```
 
 ### Task Suite Construction
@@ -357,17 +357,17 @@ Task format:
 
 ```json
 {
-  "task_id": "E4-001",
-  "tier": "medium",
-  "task_type": "lookup",
-  "prompt": "What was the architecture decision about caching strategy?",
-  "expected_answer": {
-    "memory_ids": ["01JDEF..."],
-    "fields": {"title": "ADR-007: Redis caching for session data", "namespace": "_semantic/decisions"}
-  },
-  "seed_corpus_id": "corpus-v1",
-  "relevant_memory_count": 1,
-  "total_recall_count": 247
+ "task_id": "E4-001",
+ "tier": "medium",
+ "task_type": "lookup",
+ "prompt": "What was the architecture decision about caching strategy?",
+ "expected_answer": {
+ "memory_ids": ["01JDEF..."],
+ "fields": {"title": "ADR-007: Redis caching for session data", "namespace": "_semantic/decisions"}
+ },
+ "seed_corpus_id": "corpus-v1",
+ "relevant_memory_count": 1,
+ "total_recall_count": 247
 }
 ```
 

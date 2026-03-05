@@ -12,7 +12,7 @@ This directory contains the source documents for the LRO paper.
 
 ## Status
 
-**Pre-print** — actively seeking peer review.
+**Pre-print**. actively seeking peer review.
 
 This paper has not been submitted to a venue.
 Feedback is welcome via
