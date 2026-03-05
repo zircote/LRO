@@ -1,0 +1,47 @@
+---
+title: "Large Result Offloading"
+description: "Demand-Driven Context Management for Tool-Augmented Language Models"
+template: splash
+hero:
+  title: "Large Result Offloading"
+  tagline: "Demand-Driven Context Management for Tool-Augmented Language Models"
+  actions:
+    - text: Read the Paper
+      link: /LRO/paper/
+      icon: right-arrow
+      variant: primary
+    - text: View Specification
+      link: /LRO/paper/specification/
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## About This Project
+
+This is an open-access academic paper exploring **Large Result Offloading (LRO)** — a demand-driven approach to context management in tool-augmented language models. When tool calls return datasets too large for the context window, LRO offloads results to external storage and provides structured summaries with extraction recipes, letting models retrieve exactly what they need on demand.
+
+This paper is published as a living document. We welcome peer review, feedback, and academic collaboration.
+
+<CardGrid>
+  <Card title="Read the Paper" icon="open-book">
+    The full paper covering motivation, system design, protocol specification, and evaluation.
+    [Read now](/LRO/paper/)
+  </Card>
+  <Card title="Specification" icon="document">
+    The formal specification covering system model, protocol, data structures, and conformance requirements.
+    [View specification](/LRO/paper/specification/)
+  </Card>
+  <Card title="Contributing" icon="pencil">
+    How to provide feedback, report issues, and collaborate on this research.
+    [How to contribute](/LRO/contributing/)
+  </Card>
+  <Card title="Source Code" icon="github">
+    View the source and revision history on GitHub.
+    [View on GitHub](https://github.com/zircote/LRO)
+  </Card>
+</CardGrid>
+
+## Seeking Peer Review
+
+This paper is actively seeking peer review. If you have expertise in language model architectures, context management, tool-augmented AI systems, or related fields, we welcome your feedback through [GitHub Issues](https://github.com/zircote/LRO/issues) or [GitHub Discussions](https://github.com/zircote/LRO/discussions).

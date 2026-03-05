@@ -1,0 +1,15 @@
+---
+title: "[General]: "
+labels: []
+body:
+  - type: textarea
+    id: topic
+    attributes:
+      label: Topic
+      description: >-
+        Start a general discussion about
+        the LRO paper or related topics.
+      placeholder: >-
+        What would you like to discuss?
+    validations:
+      required: true

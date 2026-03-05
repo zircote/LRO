@@ -1,0 +1,63 @@
+---
+name: Paper Feedback
+description: Provide feedback on the LRO paper content
+title: "[Feedback]: "
+labels: ["feedback"]
+body:
+  - type: dropdown
+    id: section
+    attributes:
+      label: Paper Section
+      description: >-
+        Which section does your feedback
+        relate to?
+      options:
+        - Abstract
+        - Introduction
+        - Formal Definition
+        - Related Work
+        - Architecture
+        - Evaluation (Experiment 1)
+        - Evaluation (Experiment 2)
+        - Evaluation (Experiment 3)
+        - Discussion
+        - Conclusion
+        - References
+        - Specification (separate document)
+        - General / Multiple Sections
+    validations:
+      required: true
+  - type: dropdown
+    id: feedback-type
+    attributes:
+      label: Feedback Type
+      options:
+        - Suggestion
+        - Question
+        - Concern
+        - Compliment
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: >-
+        Provide your feedback in detail.
+      placeholder: >-
+        Describe your feedback, referencing
+        specific claims, paragraphs, or
+        figures where applicable.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: Supporting References
+      description: >-
+        Optional. Include citations or links
+        that support your feedback.
+      placeholder: >-
+        e.g., Smith et al. (2025) found...
+    validations:
+      required: false

@@ -1,0 +1,56 @@
+---
+name: Collaboration Request
+description: >-
+  Propose academic collaboration or
+  joint work
+title: "[Collaboration]: "
+labels: ["collaboration"]
+body:
+  - type: input
+    id: expertise
+    attributes:
+      label: Area of Expertise
+      description: >-
+        Your relevant background or
+        research area.
+      placeholder: >-
+        e.g., context window optimization,
+        agent memory systems
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-contribution
+    attributes:
+      label: Proposed Contribution
+      description: >-
+        What would you like to
+        collaborate on?
+      placeholder: >-
+        e.g., extending evaluation to
+        additional models, implementing
+        LRO in a different framework
+    validations:
+      required: true
+  - type: dropdown
+    id: collaboration-type
+    attributes:
+      label: Collaboration Type
+      options:
+        - Co-author extensions
+        - Reproduce or extend evaluation
+        - Independent implementation
+        - Formal peer review
+        - Apply LRO to a new domain
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: contact-preference
+    attributes:
+      label: Contact Preference
+      options:
+        - GitHub Issues / Discussions
+        - Email (provide in description)
+        - Other (specify in description)
+    validations:
+      required: true

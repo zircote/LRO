@@ -1,0 +1,17 @@
+---
+title: "[Idea]: "
+labels: ["idea"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea
+      description: >-
+        Suggest extensions, applications,
+        or future research directions
+        for LRO.
+      placeholder: >-
+        Describe your idea and how it
+        relates to the paper.
+    validations:
+      required: true

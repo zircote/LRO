@@ -1,0 +1,48 @@
+---
+name: Errata / Correction
+description: >-
+  Report an error or inaccuracy in the paper
+title: "[Errata]: "
+labels: ["errata"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Location
+      description: >-
+        Section, paragraph, table, or figure
+        number where the error appears.
+      placeholder: >-
+        e.g., Section 6.1, Table 3,
+        paragraph 2
+    validations:
+      required: true
+  - type: textarea
+    id: error-description
+    attributes:
+      label: Error Description
+      description: >-
+        Describe the error or inaccuracy.
+      placeholder: What is incorrect?
+    validations:
+      required: true
+  - type: textarea
+    id: suggested-correction
+    attributes:
+      label: Suggested Correction
+      description: >-
+        If you have a proposed fix,
+        describe it here.
+      placeholder: >-
+        What should it say instead?
+    validations:
+      required: false
+  - type: textarea
+    id: references
+    attributes:
+      label: Supporting Evidence
+      description: >-
+        Optional. Citations or links
+        that support the correction.
+    validations:
+      required: false

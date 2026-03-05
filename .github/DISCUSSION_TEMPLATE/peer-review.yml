@@ -1,0 +1,29 @@
+---
+title: "[Peer Review]: "
+labels: ["peer-review"]
+body:
+  - type: textarea
+    id: review
+    attributes:
+      label: Review
+      description: >-
+        Provide a structured peer review
+        of the paper or a specific section.
+      placeholder: >-
+        Include strengths, weaknesses,
+        and suggestions for improvement.
+    validations:
+      required: true
+  - type: dropdown
+    id: recommendation
+    attributes:
+      label: Overall Assessment
+      description: >-
+        Your overall recommendation.
+      options:
+        - Strong contribution as-is
+        - Minor revisions recommended
+        - Major revisions recommended
+        - Needs significant rework
+    validations:
+      required: false
