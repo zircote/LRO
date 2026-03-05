@@ -1,12 +1,15 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 import rehypeMermaid from "rehype-mermaid";
 
 export default defineConfig({
   site: "https://zircote.com",
   base: "/LRO",
   markdown: {
-    rehypePlugins: [[rehypeMermaid, { strategy: "img-svg" }]],
+    remarkPlugins: [remarkMath],
+    rehypePlugins: [rehypeKatex, [rehypeMermaid, { strategy: "img-svg" }]],
   },
   integrations: [
     starlight({
@@ -20,6 +23,7 @@ export default defineConfig({
           href: "https://github.com/zircote/LRO",
         },
       ],
+      customCss: ["katex/dist/katex.min.css"],
       editLink: {
         baseUrl: "https://github.com/zircote/LRO/edit/main/",
       },

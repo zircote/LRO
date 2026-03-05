@@ -25,7 +25,9 @@
     "astro": "^5.18.0",
     "mermaid": "^11.12.3",
     "playwright": "^1.58.2",
+    "rehype-katex": "^7.0.1",
     "rehype-mermaid": "^3.0.0",
+    "remark-math": "^6.0.0",
     "sharp": "^0.34.5"
   }
 }
