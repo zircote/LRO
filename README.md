@@ -19,17 +19,15 @@ This work is produced by an independent researcher without formal institutional 
 
 ## Repository Structure
 
-```
-LRO/
-├── paper/
-│ ├── LRO-paper.md # Main paper
-│ ├── specification.md # Formal specification
-│ └── references.md # Bibliography
-├── CITATION.cff # Citation metadata
-├── CONTRIBUTING.md # How to contribute
-├── CODE_OF_CONDUCT.md # Community guidelines
-└── LICENSE # CC BY 4.0
-```
+| Path | Description |
+|------|-------------|
+| [`paper/LRO-paper.md`](paper/LRO-paper.md) | Main paper |
+| [`paper/specification.md`](paper/specification.md) | Formal specification |
+| [`paper/references.md`](paper/references.md) | Bibliography |
+| [`CITATION.cff`](CITATION.cff) | Citation metadata |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to contribute |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | Community guidelines |
+| [`LICENSE`](LICENSE) | CC BY 4.0 |
 
 ## Providing Feedback
 

@@ -6,9 +6,9 @@ This directory contains the source documents for the LRO paper.
 
 | File | Description |
 |------|-------------|
-| `LRO-paper.md` | Full paper (arXiv version with empirical evaluation) |
-| `specification.md` | Original design specification |
-| `references.md` | Bibliography and project references |
+| [`LRO-paper.md`](LRO-paper.md) | Full paper (arXiv version with empirical evaluation) |
+| [`specification.md`](specification.md) | Original design specification |
+| [`references.md`](references.md) | Bibliography and project references |
 
 ## Status
 
