@@ -1,0 +1,54 @@
+---
+cff-version: 1.2.0
+message: >-
+  If you use or reference this work,
+  please cite it using the metadata below.
+title: >-
+  Large Result Offloading: Demand-Driven
+  Context Management for Tool-Augmented
+  Language Models
+type: article
+authors:
+  - family-names: Allen
+    given-names: Robert
+    email: zircote@gmail.com
+    orcid: "https://orcid.org/0009-0007-9691-004X"
+date-released: "2026-03-05"
+url: "https://zircote.com/LRO"
+repository-code: "https://github.com/zircote/LRO"
+license: CC-BY-4.0
+abstract: >-
+  Tool-augmented language models face a
+  structural mismatch: retrieval operations
+  return result sets whose token cost far
+  exceeds what the model consumes downstream.
+  We formalize and empirically evaluate Large
+  Result Offloading (LRO), a token-aware
+  materialization strategy that writes large
+  tool outputs to structured files and returns
+  a compact descriptor (metadata, schema, and
+  extraction queries) in place of the full
+  payload.
+keywords:
+  - large-result-offloading
+  - context-management
+  - tool-augmented-language-models
+  - model-context-protocol
+  - demand-driven
+  - token-aware
+  - context-window-overflow
+  - agent-memory
+preferred-citation:
+  type: article
+  title: >-
+    Large Result Offloading: Demand-Driven
+    Context Management for Tool-Augmented
+    Language Models
+  authors:
+    - family-names: Allen
+      given-names: Robert
+      email: zircote@gmail.com
+      orcid: "https://orcid.org/0009-0007-9691-004X"
+  year: 2026
+  month: 3
+  url: "https://zircote.com/LRO"
