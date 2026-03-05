@@ -9,7 +9,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/readme-infographic-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset=".github/readme-infographic.svg">
-  <img alt="LRO: Problem, Solution, Result infographic" src=".github/readme-infographic.svg" width="800">
+  <img alt="LRO infographic: inline delivery collapses to 0-7% accuracy at scale, LRO achieves 73-100% accuracy with 40-62% token savings" src=".github/readme-infographic.svg" width="800">
 </picture>
 
 ## About
