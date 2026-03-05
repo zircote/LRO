@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8f9fa"/>
+      <stop offset="100%" stop-color="#e9ecef"/>
+    </linearGradient>
+    <linearGradient id="accent1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4263eb"/>
+      <stop offset="100%" stop-color="#5c7cfa"/>
+    </linearGradient>
+    <linearGradient id="accent2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3bc9db"/>
+      <stop offset="100%" stop-color="#22b8cf"/>
+    </linearGradient>
+    <linearGradient id="accent3" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#845ef7"/>
+      <stop offset="100%" stop-color="#7950f2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+
+  <!-- Geometric shapes representing data flow and offloading -->
+  <!-- Large context window (left) -->
+  <rect x="80" y="160" width="280" height="320" rx="16" fill="url(#accent1)" opacity="0.12"/>
+  <rect x="80" y="160" width="280" height="320" rx="16" fill="none" stroke="#4263eb" stroke-width="2.5" opacity="0.5"/>
+
+  <!-- Overflow indicator lines inside context window -->
+  <line x1="110" y1="210" x2="330" y2="210" stroke="#4263eb" stroke-width="2" opacity="0.25"/>
+  <line x1="110" y1="240" x2="330" y2="240" stroke="#4263eb" stroke-width="2" opacity="0.25"/>
+  <line x1="110" y1="270" x2="330" y2="270" stroke="#4263eb" stroke-width="2" opacity="0.25"/>
+  <line x1="110" y1="300" x2="330" y2="300" stroke="#4263eb" stroke-width="2" opacity="0.25"/>
+  <line x1="110" y1="330" x2="330" y2="330" stroke="#4263eb" stroke-width="2" opacity="0.35"/>
+  <line x1="110" y1="360" x2="330" y2="360" stroke="#e03131" stroke-width="2" opacity="0.5"/>
+  <line x1="110" y1="390" x2="330" y2="390" stroke="#e03131" stroke-width="2" opacity="0.5"/>
+  <line x1="110" y1="420" x2="330" y2="420" stroke="#e03131" stroke-width="2" opacity="0.5"/>
+  <line x1="110" y1="450" x2="330" y2="450" stroke="#e03131" stroke-width="2" opacity="0.5"/>
+
+  <!-- Arrow: offload flow -->
+  <path d="M 400 320 C 460 320, 460 240, 520 240" fill="none" stroke="url(#accent2)" stroke-width="3" stroke-dasharray="8,4"/>
+  <path d="M 400 320 C 460 320, 460 400, 520 400" fill="none" stroke="url(#accent2)" stroke-width="3"/>
+
+  <!-- Descriptor (compact, top path) -->
+  <rect x="520" y="200" width="180" height="80" rx="12" fill="url(#accent2)" opacity="0.15"/>
+  <rect x="520" y="200" width="180" height="80" rx="12" fill="none" stroke="#22b8cf" stroke-width="2"/>
+  <line x1="545" y1="228" x2="675" y2="228" stroke="#22b8cf" stroke-width="2" opacity="0.5"/>
+  <line x1="545" y1="248" x2="655" y2="248" stroke="#22b8cf" stroke-width="2" opacity="0.5"/>
+  <line x1="545" y1="268" x2="640" y2="268" stroke="#22b8cf" stroke-width="2" opacity="0.3"/>
+
+  <!-- Offloaded file (large, bottom path) -->
+  <rect x="520" y="340" width="180" height="120" rx="12" fill="url(#accent3)" opacity="0.1"/>
+  <rect x="520" y="340" width="180" height="120" rx="12" fill="none" stroke="#7950f2" stroke-width="2"/>
+  <!-- File lines -->
+  <line x1="545" y1="370" x2="675" y2="370" stroke="#7950f2" stroke-width="1.5" opacity="0.3"/>
+  <line x1="545" y1="388" x2="675" y2="388" stroke="#7950f2" stroke-width="1.5" opacity="0.3"/>
+  <line x1="545" y1="406" x2="675" y2="406" stroke="#7950f2" stroke-width="1.5" opacity="0.3"/>
+  <line x1="545" y1="424" x2="675" y2="424" stroke="#7950f2" stroke-width="1.5" opacity="0.3"/>
+  <line x1="545" y1="442" x2="675" y2="442" stroke="#7950f2" stroke-width="1.5" opacity="0.3"/>
+
+  <!-- Demand arrow: descriptor back to slim context -->
+  <path d="M 740 240 L 820 240" fill="none" stroke="#22b8cf" stroke-width="3"/>
+  <polygon points="820,233 835,240 820,247" fill="#22b8cf"/>
+
+  <!-- Demand arrow: on-demand retrieval from file -->
+  <path d="M 740 400 C 780 400, 780 340, 820 340" fill="none" stroke="#7950f2" stroke-width="2" stroke-dasharray="6,4" opacity="0.6"/>
+  <polygon points="820,333 835,340 820,347" fill="#7950f2" opacity="0.6"/>
+
+  <!-- Slim context window (right) -->
+  <rect x="840" y="180" width="260" height="260" rx="16" fill="url(#accent1)" opacity="0.08"/>
+  <rect x="840" y="180" width="260" height="260" rx="16" fill="none" stroke="#4263eb" stroke-width="2.5" opacity="0.6"/>
+  <line x1="870" y1="225" x2="1070" y2="225" stroke="#4263eb" stroke-width="2" opacity="0.25"/>
+  <line x1="870" y1="255" x2="1070" y2="255" stroke="#4263eb" stroke-width="2" opacity="0.25"/>
+  <line x1="870" y1="285" x2="1070" y2="285" stroke="#4263eb" stroke-width="2" opacity="0.25"/>
+  <!-- Descriptor inline -->
+  <rect x="870" y="305" width="140" height="36" rx="6" fill="#22b8cf" opacity="0.2"/>
+  <line x1="880" y1="320" x2="980" y2="320" stroke="#22b8cf" stroke-width="2" opacity="0.6"/>
+  <line x1="870" y1="365" x2="1070" y2="365" stroke="#4263eb" stroke-width="2" opacity="0.25"/>
+  <line x1="870" y1="395" x2="1070" y2="395" stroke="#4263eb" stroke-width="2" opacity="0.25"/>
+
+  <!-- Decorative geometric accents -->
+  <circle cx="1180" cy="100" r="40" fill="#4263eb" opacity="0.06"/>
+  <circle cx="1200" cy="540" r="60" fill="#7950f2" opacity="0.06"/>
+  <circle cx="60" cy="80" r="30" fill="#22b8cf" opacity="0.08"/>
+  <rect x="1150" y="300" width="80" height="80" rx="40" fill="#3bc9db" opacity="0.05" transform="rotate(45,1190,340)"/>
+
+  <!-- Labels -->
+  <text x="220" y="145" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#868e96" font-weight="500">CONTEXT WINDOW</text>
+  <text x="610" y="190" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#22b8cf" font-weight="500">DESCRIPTOR</text>
+  <text x="610" y="330" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="13" fill="#7950f2" font-weight="500">OFFLOADED FILE</text>
+  <text x="970" y="165" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#868e96" font-weight="500">SLIM CONTEXT</text>
+  <text x="330" y="380" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#e03131" font-weight="500" opacity="0.7">OVERFLOW</text>
+
+  <!-- Title -->
+  <text x="640" y="560" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="36" fill="#212529" font-weight="700" letter-spacing="-0.5">Large Result Offloading</text>
+  <text x="640" y="595" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" fill="#868e96" font-weight="400">Demand-Driven Context Management for Tool-Augmented Language Models</text>
+</svg>
