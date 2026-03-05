@@ -11,11 +11,17 @@ This specification is a living document under active development. Content will b
 
 This document provides the formal specification for the Large Result Offloading (LRO) protocol. It is intended as a companion to the [full paper](/LRO/paper/) and serves as the normative reference for implementers.
 
-When MIF operations return large result sets, the full payload consumes significant context window tokens in the AI assistant conversation. Large Result Offloading (LRO) specifies a protocol where results exceeding a token threshold are written to a temporary JSONL file, and the tool returns a compact descriptor with the file path, schema, and ready-to-use `jq` recipes, enabling the assistant to selectively extract only what it needs.
+LRO specifies a protocol where tool results exceeding a token threshold are written to a temporary JSONL file, and the tool returns a compact descriptor with the file path, schema, and ready-to-use `jq` recipes, enabling the agent to selectively extract only what it needs.
+
+**Primary value proposition:** LRO enables whole-corpus operations that are architecturally fragile under inline pagination. Empirical evaluation (126 runs, two models, three corpus scales) shows inline delivery achieves 0-7% accuracy on aggregation tasks while LRO achieves 73-100%. Token savings of 40-62% at scale are a secondary benefit. See the [full paper](/LRO/paper/) for the complete evaluation.
 
 ## Motivation
 
-Context windows are finite and expensive. A `recall_memories` call returning 200 memories at `Full` detail can easily exceed 40,000 tokens, consuming half or more of the available context for raw data the assistant will typically filter or summarize. LRO preserves the full result fidelity while returning a compact inline response that guides the assistant to selectively read only the data it needs.
+Context windows are finite and expensive. A `recall_memories` call returning 200 memories at `Full` detail can easily exceed 40,000 tokens, consuming half or more of the available context for raw data the agent will typically filter or summarize.
+
+The failure mode is not just cost. When inline delivery requires multiple paginated tool calls, agents must maintain running state across API turns. Empirical results show that models universally fail at this: counting operations across paginated responses achieve 0-7% accuracy regardless of model capability. This holds even when the agent has a persistent Python execution environment for programmatic accumulation (0% accuracy). The failure is architectural, not capability-based.
+
+LRO addresses this by materializing the complete result set to a file and returning a compact descriptor. The agent accesses the full dataset through a single shell command rather than multi-turn pagination.
 
 LRO applies to the following MCP tools:
 
@@ -53,13 +59,15 @@ The MCP server spec declares `taskSupport: "optional"` for `recall_memories` and
 
 ### Relationship to Pagination
 
-LRO and Paginated Recall are complementary mechanisms that address the same problem --- large result sets --- through different strategies. When both are available, LRO takes precedence: if the total result set exceeds the offload threshold, the server offloads the full result set to a JSONL file and returns an `OffloadResponse`. Pagination cursors are **not** returned in this case because the agent can access the complete data via the JSONL file.
+LRO and Paginated Recall are complementary mechanisms that address the same problem (large result sets) through different strategies. When both are available, LRO takes precedence: if the total result set exceeds the offload threshold, the server offloads the full result set to a JSONL file and returns an `OffloadResponse`. Pagination cursors are **not** returned in this case because the agent can access the complete data via the JSONL file.
 
 > **Sequencing:** LRO threshold evaluation occurs on the initial request before any pagination cursor is created. If the LRO interceptor activates, no cursor is created and the server returns an `OffloadResponse`. A result set MUST NOT simultaneously be offloaded to JSONL and have an active pagination cursor.
 
 Pagination applies when:
 - LRO is disabled (`prompt.offload.enabled = false`), or
 - The result set falls below the LRO threshold.
+
+> **Empirical note:** The paper's evaluation confirms that paginated inline delivery fails at aggregation tasks (0-7% accuracy across all scales and models). LRO's precedence over pagination is not just a design preference; it addresses a measured architectural failure mode.
 
 ## Threshold Detection
 
@@ -83,6 +91,8 @@ The threshold check occurs **after** the operation completes but **before** form
 
 > **Normative:** The threshold is evaluated against the **total** result set, not individual memories. A single large memory below the threshold is returned inline; many small memories exceeding the threshold collectively are offloaded.
 
+> **Empirical note:** At small corpus scales (n=50), LRO's fixed overhead can exceed the token savings (1.28x overhead measured for Haiku). The default threshold of 1,600 tokens (approximately 10 records at 155 tokens/record) avoids this small-n regime. Token savings of 40-62% emerge at n >= 200.
+
 ### Detail Level
 
 The JSONL file MUST serialize memories at the detail level specified in the original tool call. If the caller requests `detail: "light"`, the offloaded file contains Light-detail records. If no detail level is specified, the tool's default applies (`light` for `recall_memories`, `medium` for `inject_context`).
@@ -93,7 +103,7 @@ This matters for two reasons:
 
 ## JSONL File Format
 
-Offloaded results are written as line-delimited JSON (JSONL). Each file consists of a header line followed by one MIF memory object per line.
+Offloaded results are written as line-delimited JSON (JSONL). Each file consists of a header line followed by one MIF memory object per line. JSONL is chosen for its compatibility with Unix pipeline idioms (`tail -n +2 | jq...`), which aligns with the shell-capable environments where LRO is most applicable.
 
 ### Header Line (Line 1)
 
@@ -173,9 +183,7 @@ pub struct OffloadedResult {
 
 ## Inline Response Format
 
-When LRO activates, the tool returns an `OffloadResponse` instead of the full result set. This response is designed as a self-contained prompt that gives the AI assistant everything it needs to work with the offloaded data: a summary for orientation, jq recipes for extraction, and a guidance prompt explaining how to proceed.
-
-The LLM receives this descriptor as the tool result and uses its own capabilities (shell tools, file reading) to act on the referenced file. The MCP server's responsibility ends at producing the descriptor.
+When LRO activates, the tool returns an `OffloadResponse` instead of the full result set. The critical component is the `file_path`: empirical evaluation shows that file access combined with shell capability is the primary enabler. The remaining descriptor fields (schema, recipes, guidance) provide forward-compatible scaffolding but are not required for current-generation models to succeed.
 
 ```rust
 /// Compact response returned when results are offloaded to JSONL.
@@ -231,9 +239,19 @@ pub struct JqRecipe {
 }
 ```
 
+### The Descriptor Paradox
+
+Empirical evaluation reveals a counterintuitive result: a bare file pointer (file path only, no schema, no recipes, no guidance) achieves 95.6% mean accuracy on ID lookup tasks, outperforming the full descriptor at 84.4%. This inversion holds across both simple ID lookup tasks and complex multi-field filter tasks (12.9% accuracy for all descriptor configurations on filter tasks).
+
+The explanation is behavioral. Under natural prompting, agents proceed directly to `bash` + `jq` or `grep` regardless of descriptor richness. Rich descriptors may induce agents to spend turns analyzing metadata before executing the straightforward command that solves the task. Current models have internalized sufficient knowledge of common data formats (JSON, JSONL) to navigate structured files without external schema.
+
+**Implication for implementers:** The `file_path` field is the functionally critical component. The `line_schema`, `jq_recipes`, and `guidance` fields are included for forward compatibility and for weaker models that benefit from scaffolding. Implementations MUST include all fields per the struct definition, but should not expect current-generation models to consume them systematically.
+
 ### Standard jq Recipe Library
 
 Implementations MUST include exactly 10 recipes in every `OffloadResponse`. Recipes 1-8 are universal and use only Light-level fields. Recipes 9-10 adapt based on the detail level of the offloaded data.
+
+> **Empirical note:** Recipe utility is model-dependent. Capable models (e.g., Claude Haiku 4.5) formulate effective `jq` queries without recipes, achieving 98-100% goal achievement in both recipe and no-recipe conditions. Weaker models (e.g., GPT-5-mini) show +13-20 percentage point improvement in goal achievement when recipes are provided. Recipes serve as capability scaffolding, not a universal requirement. Implementations targeting capable models MAY deprioritize recipe optimization; implementations targeting a range of model capabilities SHOULD include the full recipe library.
 
 #### Universal Recipes (1-8)
 
@@ -271,11 +289,13 @@ Detail level: {detail}
 Use the jq recipes above to extract specific data. Common patterns:
 - Browse: recipe #1 (titles with namespaces)
 - Filter: recipe #2 (by namespace) or #3 (by keyword)
-- Analyze: recipe #8 (count by namespace)
+- Analyze: recipe #6 (count by namespace)
 
 Read the file directly only if you need the complete dataset.
 The header line (line 1) contains metadata; memory objects start at line 2.
 ```
+
+The guidance prompt uses advisory language ("Use the jq recipes above") rather than imperative language, so an agent without shell tools can skip the extraction step without producing an error. Empirical evaluation shows that agents largely ignore guidance under natural behavior, defaulting to their own `jq` and `grep` commands regardless of descriptor content. The guidance is included for forward compatibility with models that may consume structured tool metadata more effectively.
 
 ## Integration with inject_context
 
@@ -297,14 +317,14 @@ flowchart TD
     C -->|No| D[Return inline response]
     C -->|Yes| E[Write JSONL to temp file]
     E --> F[Build OffloadResponse]
-    F --> G[Include summary + jq recipes + guidance]
+    F --> G[Include file_path + summary + recipes + guidance]
     G --> H[Return OffloadResponse as tool result]
 
-    H --> I{LLM decides next action}
-    I -->|Needs subset| J[LLM runs jq recipe via shell tool]
+    H --> I{Agent decides next action}
+    I -->|Needs subset| J[Agent runs jq/grep via shell]
     J --> K[Filtered data enters conversation]
-    I -->|Needs full file| L[LLM reads file directly]
-    I -->|Summary sufficient| M[LLM proceeds with summary only]
+    I -->|Needs full file| L[Agent reads file directly]
+    I -->|Summary sufficient| M[Agent proceeds with summary only]
 
     style C fill:#f9f,stroke:#333,stroke-width:2px
     style D fill:#9f9,stroke:#333
@@ -312,6 +332,8 @@ flowchart TD
     style L fill:#9f9,stroke:#333
     style M fill:#9f9,stroke:#333
 ```
+
+> **Empirical note:** In practice, agents read 0-2% of offloaded records. The dominant access pattern is a single targeted `grep` or `jq` command, not iterative exploration. File-write overhead is approximately 24ms, negligible relative to API latency.
 
 ## Cleanup and Lifecycle
 
@@ -387,7 +409,7 @@ For deployments **without** a proxy, the original constraint still applies: stre
 
 ### Local LRO Proxy for Remote Servers
 
-Implementations MAY provide a lightweight local MCP server (via stdio transport) whose sole responsibility is materializing LRO files on the local filesystem on behalf of a remote HTTP-based server. This pattern enables a centralized memory system --- where all memory storage, search, and enrichment run on a shared remote server --- while preserving the local file access that LRO's jq-based extraction workflow requires.
+Implementations MAY provide a lightweight local MCP server (via stdio transport) whose sole responsibility is materializing LRO files on the local filesystem on behalf of a remote HTTP-based server. This pattern enables a centralized memory system (where all memory storage, search, and enrichment run on a shared remote server) while preserving the local file access that LRO's extraction workflow requires.
 
 ```mermaid
 flowchart LR
@@ -467,7 +489,7 @@ Available recipes: 1=titles+namespaces, 2=filter namespace, 3=search titles,
 9=detail-adaptive, 10=detail-adaptive.
 ```
 
-> **Normative:** The guidance prompt is generated by the tool itself --- the implementation that provides `lro_extract` owns the prompt content. This ensures the guidance accurately reflects the tool's actual parameter interface, available recipes, and any implementation-specific extensions.
+> **Normative:** The guidance prompt is generated by the tool itself: the implementation that provides `lro_extract` owns the prompt content. This ensures the guidance accurately reflects the tool's actual parameter interface, available recipes, and any implementation-specific extensions.
 
 Because the guidance is self-describing, the LLM discovers the extraction capability at the moment it receives an offloaded result. No MCP initialization handshake or capability negotiation is required beyond the tool being listed in the server's tool manifest.
 
@@ -496,6 +518,23 @@ Implementations MAY detect the client's tool capabilities during MCP initializat
 
 | Conformance Level | Requirement |
 |-------------------|-------------|
-| Level 1 | MAY implement LRO. If implemented, MUST support threshold detection and JSONL output. |
-| Level 2 | SHOULD implement LRO. If implemented, MUST include the standard jq recipe library and custodial cleanup. |
-| Level 3 | MUST implement LRO with threshold detection, JSONL output, full jq recipe library, custodial cleanup, and error fallback. |
+| Level 1 (Basic) | MAY implement LRO. If implemented, MUST support threshold detection and JSONL output. Descriptor contains file reference and summary statistics. |
+| Level 2 (Standard) | SHOULD implement LRO. If implemented, MUST include the standard jq recipe library and custodial cleanup. Level 1 plus schema definition and extraction query library. |
+| Level 3 (Full) | MUST implement LRO with threshold detection, JSONL output, full jq recipe library, custodial cleanup, error fallback to inline truncation, and observability events. |
+
+> **Empirical note on conformance:** The descriptor paradox suggests that Level 1 conformance (file reference + summary) captures the functional value of LRO for current-generation models. Levels 2 and 3 add forward-compatible scaffolding that may become functionally significant as models evolve to consume structured tool metadata more effectively. The recipe library at Level 2 provides measurable benefit (+13-20pp goal achievement) for weaker models.
+
+## Empirical Summary
+
+The following empirical findings from the [full paper](/LRO/paper/) inform this specification's design:
+
+| Finding | Impact on Specification |
+|---------|----------------------|
+| Inline delivery fails at 0-7% accuracy on aggregation tasks | LRO takes precedence over pagination; addresses an architectural failure, not just cost |
+| Inline+Code (persistent Python env) also achieves 0% accuracy | Failure is architectural, not tooling-limited; file materialization is the key enabler |
+| Bare pointer matches full descriptor (95.6% vs 84.4%) | `file_path` is the critical field; schema/recipes/guidance are forward-compatible scaffolding |
+| Descriptor paradox holds across task complexity (ID lookup and multi-field filtering) | No descriptor configuration outperforms bare pointer on any evaluated task type |
+| Recipe utility is model-dependent (+13-20pp for weaker models, +0pp for capable models) | Recipe library MUST be included per spec, but implementations can adapt richness to target model |
+| Agents read 0-2% of offloaded records | Validates demand-driven design; access ratio well below theoretical breakeven |
+| Token savings of 40-62% at n >= 200, slight overhead at n=50 | Default threshold avoids small-n overhead regime |
+| Filter tasks achieve 12.9% accuracy across all LRO conditions | Compositional query construction is a capability frontier, not an LRO limitation |
