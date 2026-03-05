@@ -1,6 +1,16 @@
 # Large Result Offloading: Demand-Driven Context Management for Tool-Augmented Language Models
 
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![Paper](https://img.shields.io/badge/Paper-Read_Online-4263eb.svg)](https://zircote.com/LRO/paper/)
+[![Specification](https://img.shields.io/badge/Spec-Formal_Specification-7950f2.svg)](https://zircote.com/LRO/paper/specification/)
+[![Status](https://img.shields.io/badge/Status-Pre--print-orange.svg)]()
+[![Peer Review](https://img.shields.io/badge/Seeking-Peer_Review-22b8cf.svg)](https://github.com/zircote/LRO/issues)
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/readme-infographic-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset=".github/readme-infographic.svg">
+  <img alt="LRO: Problem, Solution, Result infographic" src=".github/readme-infographic.svg" width="800">
+</picture>
 
 ## About
 
