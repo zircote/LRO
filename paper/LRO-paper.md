@@ -4,7 +4,7 @@ author: Robert Allen
 date: March 2026
 ---
 
-**Abstract.** Tool-augmented language models face a structural mismatch: retrieval operations return result sets whose token cost far exceeds what the model consumes downstream. We formalize and empirically evaluate *Large Result Offloading* (LRO), a token-aware materialization strategy that writes large tool outputs to structured files and returns a compact descriptor (metadata, schema, and extraction queries) in place of the full payload. We evaluate LRO across 126 evaluation runs spanning two models (Claude Haiku 4.5, GPT-5-mini), three corpus scales (50, 200, 500 records), two task types (ID lookup and multi-field filtering), and 21 experimental conditions. LRO agents achieve 73--100% task accuracy on whole-corpus ID lookup operations where the inline baseline collapses to 0--7%, a result that holds even when the inline agent is given a persistent Python execution environment (0% accuracy). Token savings of 40--62% at scale are a secondary benefit; the primary contribution is enabling whole-corpus operations that are architecturally fragile under naive inline pagination. A descriptor ablation study reveals that agents ignore rich metadata under natural behavior: a bare file pointer performs as well as a full descriptor on ID lookup tasks. A second ablation on multi-field filter tasks confirms this pattern, while revealing that filter tasks are harder by a wider margin (12.9% accuracy across all descriptor configurations); future descriptor designs should target task complexity rather than metadata richness. Recipe utility is model-dependent: capable models derive no benefit from extraction templates, while weaker models show +13--20 percentage point improvement in goal achievement. These findings reframe LRO's value proposition: the primary contribution is task enablement, not cost reduction. Task complexity is the next frontier for descriptor design.
+**Abstract.** Tool-augmented language models face a structural mismatch: retrieval operations return result sets whose token cost far exceeds what the model consumes downstream. Inline pagination of these results yields 0--7% accuracy on whole-corpus tasks even when the agent has access to a persistent Python execution environment (0% accuracy), demonstrating pagination-induced state loss as a robust failure mode of current-generation models. We formalize and empirically evaluate *Large Result Offloading* (LRO), an architectural repair that writes large tool outputs to structured files and returns a compact descriptor (metadata, schema, and extraction queries) in place of the full payload. We evaluate LRO across 126 evaluation runs spanning two models (Claude Haiku 4.5, GPT-5-mini), three corpus scales (50, 200, 500 records), two task types (ID lookup and multi-field filtering), and 21 experimental conditions. LRO restores 73--100% accuracy on whole-corpus ID lookup tasks where inline delivery collapses entirely. Token savings of 40--62% at scale are a secondary benefit. On more complex multi-field filters, LRO restores access but not competence: all descriptor variants plateau at 12.9% accuracy while inline remains at 0%, isolating compositional query synthesis as the remaining bottleneck. A descriptor ablation study reveals that agents ignore rich metadata under natural behavior: a bare file pointer performs as well as a full descriptor across both task types. Recipe utility is model-dependent: capable models derive no benefit from extraction templates, while weaker models show +13--20 percentage point improvement in goal achievement. These findings reframe LRO's value proposition: the primary contribution is architectural repair for pagination-induced state loss, not cost reduction. We release lro-bench, an open benchmark and reference implementation for evaluating tool-result delivery strategies.
 
 ---
 
@@ -22,7 +22,7 @@ The consequences fall into two categories that compound each other.
 
 **The reasoning degradation is harder to see but more damaging.** Transformer-based models exhibit diminished attention fidelity over long sequences. Liu et al. [20] demonstrate the "lost in the middle" phenomenon: information buried in long contexts receives less attention. Kate et al. [21] measure this directly for tool-augmented systems, finding that function-calling accuracy degrades 7--91% as tool response length increases, with degradation onset well below typical context limits. Li et al. [9] draw parallels between this problem and buffer management in database systems. The implication is concrete: burying relevant information within a large payload of irrelevant tool results reduces the probability of correct downstream reasoning, and the model cannot detect what it missed, especially when relevant records are dispersed across a large payload.
 
-**A third failure mode emerges from our empirical evaluation and, to our knowledge, has not been documented in prior work: pagination-induced state loss.** When inline delivery requires multiple paginated tool calls, the model must maintain a running tally across API turns. Our results (Section 6) show that models universally fail at this: counting operations that aggregate results across paginated responses achieve 0--7% accuracy regardless of model capability. The failure is architectural, not capability-based: each paginated response competes with prior responses for attention, and the model cannot reliably accumulate state across sequential tool invocations.
+**A third failure mode emerges from our empirical evaluation and, to our knowledge, has not been documented in prior work: pagination-induced state loss.** When inline delivery requires multiple paginated tool calls, the model must maintain a running tally across API turns. Our results (Section 6) show that models universally fail at this: counting operations that aggregate results across paginated responses achieve 0--7% accuracy regardless of model capability. The failure is not remediated by providing computational tools: a persistent Python execution environment alongside paginated data achieves 0% accuracy. This suggests that pagination-induced state loss requires architectural or training-level intervention rather than tooling changes.
 
 LRO addresses these failure modes by introducing an indirection layer between tool execution and context injection. Result content binds to model context only when the model requests specific subsets. This reframes the problem from "how do we fit more into context" to "how do we design the information contract between tools and agents so that context consumption is demand-driven rather than supply-driven."
 
@@ -37,6 +37,8 @@ The empirical evaluation in Section 6, conducted across 126 evaluation runs with
 - **Descriptor paradox:** A bare file pointer (95.6% accuracy) outperforms the full descriptor (84.4%) on ID lookup tasks. Agents ignore rich metadata under natural behavior (Table 7, Figure 4).
 - **Task-dependent descriptor utility:** On multi-field filter tasks requiring namespace filtering, priority comparison, and content search, all descriptor configurations achieve 12.9% accuracy while inline delivery collapses to 0%. The descriptor paradox holds across task types, but filter tasks expose a harder problem: agents struggle with multi-criteria queries regardless of metadata richness (Table 11, Section 6.4).
 - **Model-dependent scaffolding:** Extraction recipes provide no benefit for capable models but improve goal achievement by 13--20pp for weaker ones (Table 9, Figure 6).
+
+**Scope.** This evaluation is scoped to two mid-tier commercial models (Claude Haiku 4.5, GPT-5-mini), memory-style JSON records in JSONL format, shell-capable local environments, and deterministic mock tools. We do not evaluate search APIs, log query systems, API response aggregations, or multi-agent shared state; generalization to those domains is a hypothesis for future work, not a demonstrated result. Frontier models with larger context windows and stronger long-context attention may exhibit different pagination behavior; our architectural claims apply to current-generation models as tested.
 
 ## Formal Definition
 
@@ -60,7 +62,7 @@ LRO sits at the intersection of context management, agent memory systems, and to
 
 ### Context Window Management as Virtual Memory
 
-The most structurally similar prior work is MemGPT [2], which models the LLM context window as a virtual memory system with main memory (context window) and external storage (database/files). MemGPT introduces page-in/page-out operations that move information between these tiers based on agent needs, directly analogous to OS-level demand paging. LRO shares MemGPT's foundational insight that the context window should be treated as a managed resource with explicit eviction and loading policies, but differs in its loading interface. Where MemGPT provides generic memory management primitives (`core_memory_append`, `archival_memory_search`), LRO provides **result-specific** extraction queries tailored to a particular tool output's schema. The difference matters: MemGPT's primitives require the agent to formulate its own retrieval strategy, while LRO's descriptor includes pre-computed queries that encode domain knowledge about common access patterns.
+The most structurally similar prior work is MemGPT [2], which models the LLM context window as a virtual memory system with main memory (context window) and external storage (database/files). MemGPT introduces page-in/page-out operations that move information between these tiers based on agent needs, directly analogous to OS-level demand paging. MemGPT is a *general memory manager*: it provides generic memory management primitives (`core_memory_append`, `archival_memory_search`) that the agent invokes to formulate its own retrieval strategy. LRO is a *tool-result interface specification*: it provides **result-specific** extraction queries tailored to a particular tool output's schema, backed by quantitative evidence that pagination-based delivery fails at 0--7% accuracy on whole-corpus tasks. The distinction is architectural scope versus interface contract: MemGPT manages the full memory lifecycle, while LRO formalizes the boundary between a single tool's output and the agent's consumption of that output.
 
 The virtual memory analogy extends to the systems level. Kwon et al.'s PagedAttention [16] and Prabhu et al.'s vAttention [15] apply paging concepts to the KV-cache layer of transformer inference, managing GPU memory through block-level allocation and on-demand loading. While these operate at a different abstraction layer (inference engine memory rather than semantic context), they validate the broader principle that demand-driven loading outperforms eager allocation when the working set is smaller than the total addressable space.
 
@@ -84,7 +86,7 @@ LRO applies a complementary form of decoupling: the tool executes and produces i
 
 ### Code-Based Agent Actions
 
-CodeAct [12] demonstrates that agents operating through executable code actions, rather than constrained tool APIs, achieve superior performance on complex tasks. CodeAct agents can write Python code that processes data in a sandboxed environment, naturally enabling out-of-band data manipulation. LRO's extraction query library (`jq` recipes) instantiates a similar principle in a more constrained form: rather than giving the agent a general-purpose programming environment, it provides a curated set of domain-specific queries that cover the most common access patterns for structured memory data.
+CodeAct [12] demonstrates that agents operating through executable code actions, rather than constrained tool APIs, achieve superior performance on complex tasks. CodeAct agents can write Python code that processes data in a sandboxed environment, naturally enabling out-of-band data manipulation. LRO's extraction query library (`jq` recipes) instantiates a similar principle in a more constrained form: rather than giving the agent a general-purpose programming environment, it provides a curated set of domain-specific queries that cover the most common access patterns for structured memory data. Our Inline+Code baseline (Section 6.1) is effectively a CodeAct-style environment restricted to this task domain: the agent receives paginated data alongside a persistent Python execution environment for programmatic accumulation. Despite this, Inline+Code achieves 0% accuracy across all conditions, consuming 30--55% more tokens than standard inline delivery. This is a strong empirical differentiator: even the CodeAct pattern cannot overcome pagination-induced state loss when the data arrives in paginated fragments rather than as a materialized file.
 
 MOSS [19] extends this pattern by enabling code-driven evolution of agent capabilities, including context management through programmatic interfaces. LRO's query library is a specialized instance of MOSS's code-driven context management, narrowed to the tool response layer.
 
@@ -97,6 +99,17 @@ A-RAG [3] introduces hierarchical retrieval with specialized sub-agents for diff
 Li et al. [9] map database system concepts to LLM inference challenges (VLDB). Their analysis identifies buffer management, query optimization, and result set handling as areas where decades of database research apply to LLM system design. LRO directly instantiates their observation about result spooling: when a query produces a result set exceeding client buffer capacity, the system materializes to server-side storage and provides a cursor interface for demand-driven access. In LRO, the "cursor" is the extraction query library and the "client buffer" is the context window.
 
 Oracle's comparative analysis of file systems and databases for AI agent memory [10] further validates the file-based materialization approach, finding that structured file formats provide adequate performance for agent memory access patterns while offering superior compatibility with shell-based tool execution environments.
+
+### Comparative Summary
+
+**Table 2.** Positioning of LRO against related context management approaches.
+
+| Approach | Fidelity | Decision Point | Interface | Evaluation Focus |
+|----------|----------|---------------|-----------|-----------------|
+| MemGPT [2] | Lossless | Per-operation (agent-driven) | Generic memory ops | Memory management |
+| ACON [5] / LLMLingua [7] | Lossy | Global (accumulated context) | Compressed text | Compression ratio |
+| CodeAct [12] | Lossless | Per-action (agent-driven) | Code execution sandbox | Task completion |
+| **LRO** | **Lossless** | **Per-result (threshold-triggered)** | **Typed descriptor + extraction queries** | **Pagination failure + delivery** |
 
 ### Positioning
 
@@ -193,7 +206,9 @@ This yields approximately 96% context window savings for the stated parameters. 
 
 The breakeven point, where LRO's descriptor overhead exceeds the savings from not injecting results inline, occurs when $k/n$ approaches $1 - d/(n \times t)$. For $n = 50$, breakeven is at $k/n \approx 0.90$ (consuming 45 of 50 records). The default threshold $\tau$ = 1,600 tokens (approximately 10 records at $t = 155$) avoids the small-*n* regime where breakeven is reached quickly.
 
-This analysis assumes homogeneous record sizes ($t = 155$ tokens, the empirical mean for full-detail memory records) and a fixed descriptor overhead ($d \approx 800$ tokens for summary, schema, and 10 standard recipes). In practice, $t$ varies by record content and detail level, and $d$ scales with schema complexity and recipe count. The analysis is illustrative for the memory-recall use case; heterogeneous record sizes or multi-tool pipelines would require per-invocation estimation.
+This analysis assumes homogeneous record sizes ($t = 155$ tokens, the empirical mean for full-detail memory records) and a fixed descriptor overhead ($d \approx 800$ tokens for summary, schema, and 10 standard recipes). In practice, $t$ varies by record content and detail level, and $d$ scales with schema complexity and recipe count. This analysis is illustrative for memory-recall workloads and is not intended as a universal cost model.
+
+**When the model breaks down.** The savings model degrades in three regimes: (1) *highly skewed record sizes*, where a few long records (incident reports, code snippets) dominate the mean and the fixed $t$ understates variance; (2) *high access ratio $k/n$*, where the agent consumes a large fraction of results (e.g., statistical summaries or "find all X" operations), reducing the deferral benefit --- breakeven at $n = 50$ occurs at $k/n \approx 0.90$; and (3) *very small $n$*, where LRO's fixed descriptor overhead exceeds the savings from not paginating. Our empirical results confirm regime (3): at $n = 50$, Haiku sees a 1.28x token overhead (Table 5). The default threshold $\tau = 1{,}600$ tokens mitigates this by avoiding offloading below approximately 10 records.
 
 ### Comparison with Compression Approaches
 
@@ -213,7 +228,7 @@ Unlike lossy compression techniques (LLMLingua [7], ACON [5]), LRO preserves *co
 
 ### Deployment Applicability
 
-LRO's applicability is bounded by the intersection of two client capabilities: filesystem access and shell execution. Full LRO (descriptor + extraction queries) requires both; environments without filesystem access receive metadata-only descriptors. A local proxy can bridge remote MCP deployments by materializing JSONL files on the client's filesystem (see Appendix D for the full deployment matrix).
+LRO's applicability is bounded by the intersection of two client capabilities: filesystem access and shell execution. Full LRO (descriptor + extraction queries) requires both; environments without filesystem access receive metadata-only descriptors. LRO's current implementation is best suited to IDE-style local agents (Claude Code, Cursor, Windsurf); pure web, mobile, and chat environments require either a local proxy or a native extraction tool, which we sketch in Appendix E but do not evaluate. A local proxy can bridge remote MCP deployments by materializing JSONL files on the client's filesystem (see Appendix D for the full deployment matrix).
 
 ### Determinism and Auditability
 
@@ -235,7 +250,7 @@ We evaluate LRO through four experiments testing specific claims about its utili
 
 Experiment E4 introduces a second task type, *aggregate filtering*, to test whether descriptor utility varies with task complexity. Each aggregate filter task asks: "How many memories in namespace X have priority $\geq$ Y and mention product Z in their content?" Correct answers require conjunction of three criteria (exact namespace match, ordinal priority comparison, and case-insensitive content search), a composition that a single `grep` cannot express but a `jq` pipeline with schema awareness can. Ground truth counts range from 3 to 50 matching records per task.
 
-**Evaluation framework.** We use Inspect AI [24] for all evaluations, with 15 tasks per condition, a 20-turn message limit per task, and model-specific API configurations. The primary metric is *count accuracy*: a binary score of 1.0 if the agent reports exactly 8, 0.0 otherwise. Token usage is measured as `total_tokens` from the model's usage reporting, aggregated across all API calls within a sample.
+**Evaluation framework.** We use Inspect AI [24] for all evaluations, with 15 tasks per condition, a 20-turn message limit per task, and model-specific API configurations. The primary metric is *count accuracy*: a binary score of 1.0 if the agent reports exactly 8, 0.0 otherwise. Token usage is measured as `total_tokens` from the model's usage reporting, aggregated across all API calls within a sample. We report raw task-level counts (e.g., "14/15") alongside percentages throughout to make granularity transparent. At 15 tasks per condition, the evaluation is powered to detect the large effects observed (inline collapse from ~90% to 0%) but not to characterize fine-grained differences between LRO conditions; we report no confidence intervals or statistical tests.
 
 **Delivery strategies.** Five strategies implement different data delivery mechanisms:
 
@@ -268,11 +283,11 @@ The Inline+Code strategy provides a stronger baseline motivated by CodeAct [12]:
 | Strategy | n=50 | | n=200 | | n=500 | |
 |---|---|---|---|---|---|---|
 | | Haiku | GPT-5-mini | Haiku | GPT-5-mini | Haiku | GPT-5-mini |
-| **LRO** | **93.3** | **73.3** | **93.3** | **86.7** | **86.7** | **73.3** |
-| Inline | 0.0 | 0.0 | 0.0 | 6.7 | 0.0 | 0.0 |
-| Inline+Code | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 |
-| Summary | 46.7 | 100.0 | 33.3 | 33.3 | 13.3 | 40.0 |
-| Truncation | 40.0 | 80.0 | 26.7 | 80.0 | 6.7 | 100.0 |
+| **LRO** | **14/15 (93.3%)** | **11/15 (73.3%)** | **14/15 (93.3%)** | **13/15 (86.7%)** | **13/15 (86.7%)** | **11/15 (73.3%)** |
+| Inline | 0/15 (0.0%) | 0/15 (0.0%) | 0/15 (0.0%) | 1/15 (6.7%) | 0/15 (0.0%) | 0/15 (0.0%) |
+| Inline+Code | 0/15 (0.0%) | 0/15 (0.0%) | 0/15 (0.0%) | 0/15 (0.0%) | 0/15 (0.0%) | 0/15 (0.0%) |
+| Summary | 7/15 (46.7%) | 15/15 (100.0%) | 5/15 (33.3%) | 5/15 (33.3%) | 2/15 (13.3%) | 6/15 (40.0%) |
+| Truncation | 6/15 (40.0%) | 12/15 (80.0%) | 4/15 (26.7%) | 12/15 (80.0%) | 1/15 (6.7%) | 15/15 (100.0%) |
 
 **Table 4.** E1 API tokens (thousands) by strategy, scale, and model.
 
@@ -334,11 +349,11 @@ All LRO conditions (C1--C4) receive identical system prompts; only the descripto
 | Condition | n=50 | | n=200 | | n=500 | |
 |---|---|---|---|---|---|---|
 | | Haiku | GPT-5-mini | Haiku | GPT-5-mini | Haiku | GPT-5-mini |
-| C1 Full LRO | 86.7 | 73.3 | 93.3 | 86.7 | **100.0** | 66.7 |
-| C2 No Recipes | **100.0** | 80.0 | **100.0** | **100.0** | 93.3 | 86.7 |
-| C3 No Schema | 86.7 | 66.7 | **100.0** | 73.3 | **100.0** | 86.7 |
-| C4 Bare Pointer | **100.0** | 80.0 | **100.0** | **100.0** | **100.0** | **93.3** |
-| C5 Inline | 0.0 | 0.0 | 0.0 | 6.7 | 0.0 | 0.0 |
+| C1 Full LRO | 13/15 (86.7%) | 11/15 (73.3%) | 14/15 (93.3%) | 13/15 (86.7%) | **15/15 (100.0%)** | 10/15 (66.7%) |
+| C2 No Recipes | **15/15 (100.0%)** | 12/15 (80.0%) | **15/15 (100.0%)** | **15/15 (100.0%)** | 14/15 (93.3%) | 13/15 (86.7%) |
+| C3 No Schema | 13/15 (86.7%) | 10/15 (66.7%) | **15/15 (100.0%)** | 11/15 (73.3%) | **15/15 (100.0%)** | 13/15 (86.7%) |
+| C4 Bare Pointer | **15/15 (100.0%)** | 12/15 (80.0%) | **15/15 (100.0%)** | **15/15 (100.0%)** | **15/15 (100.0%)** | **14/15 (93.3%)** |
+| C5 Inline | 0/15 (0.0%) | 0/15 (0.0%) | 0/15 (0.0%) | 1/15 (6.7%) | 0/15 (0.0%) | 0/15 (0.0%) |
 
 **Table 7.** E2 mean count accuracy across all scales and models.
 
@@ -426,6 +441,15 @@ First, **the descriptor paradox extends to complex tasks**. All four LRO conditi
 
 Second, **filter tasks are substantially harder than ID lookup**. The 12.9% accuracy across LRO conditions compares to 84--96% on E2's ID lookup tasks under the same descriptor configurations. Multi-criteria conjunction queries expose a genuine capability gap: the agent must chain multiple `jq select()` predicates or equivalent shell operations, handle nested field paths, and apply comparison operators correctly. The difficulty is not in finding the file or understanding the format (bare pointer suffices for that) but in composing correct multi-predicate queries against structured data.
 
+A taxonomy of failure modes from evaluation logs confirms this diagnosis:
+
+- **Wrong comparison operator:** Agent uses `== 3` instead of `>= 3` for priority thresholds, or reverses the direction of inequality.
+- **Missing namespace filter:** Agent applies content and priority filters but omits the namespace prefix constraint, returning a superset of matching records.
+- **Incorrect keyword matching:** Agent searches for exact string match instead of case-insensitive substring, or searches the wrong field (title instead of content).
+- **Malformed jq syntax:** Agent produces syntactically invalid `jq` expressions (unclosed parentheses, incorrect `select()` nesting, wrong pipe placement), causing the command to fail silently or return empty results.
+
+All four failure modes are in query composition, not data discovery: agents locate the correct file and identify the JSONL structure, but fail to translate the multi-criteria natural language query into a correct `jq` pipeline.
+
 Third, **the inline ceiling remains at zero**. C5 achieves 0% accuracy on filter tasks, consistent with E1 and E2 findings. Inline delivery fails regardless of task complexity.
 
 The C1 vs C4 delta of +0.0 percentage points contradicts the hypothesis that motivated E4. We designed this experiment expecting schema and recipe information to help on complex tasks where the agent cannot rely on simple `grep`. Instead, the data shows that descriptor metadata is orthogonal to task difficulty: both simple and complex tasks yield the same bare-pointer parity. The descriptor paradox is not task-type-specific; it reflects how current models interact with structured tool metadata.
@@ -455,25 +479,31 @@ On filter tasks (E4), both models converge to 12.9% accuracy regardless of descr
 
 ### Reframing LRO's Value Proposition
 
-The theoretical analysis (Section 5) frames LRO as a cost optimization, trading disk I/O for context savings. The empirical results demand a reframing: **LRO's primary value is enabling whole-corpus operations that are failure-prone under naive inline pagination.** The 0--7% inline accuracy at scale is not a benchmark weakness or a task design artifact; it demonstrates a fundamental limitation of paginated in-context data delivery for aggregation tasks.
+The theoretical analysis (Section 5) frames LRO as a cost optimization, trading disk I/O for context savings. The empirical results demand a reframing: **LRO's primary value is architectural repair for pagination-induced state loss.** The 0--7% inline accuracy at scale is not a benchmark weakness or a task design artifact; it demonstrates that pagination-induced state loss is a robust failure mode of current-generation models that is not remediated by providing computational tools. This suggests it requires architectural or training-level intervention --- such as explicit scratchpad training, extended working memory architectures, or tool-use fine-tuning on accumulation patterns --- rather than tooling changes alone.
 
-LRO is not an optional optimization for cost-sensitive deployments. For agent tasks that require processing a complete result set --- counting, filtering, aggregation, deduplication --- it is a reliability requirement when the result set exceeds a single tool response.
+LRO is not an optional optimization for cost-sensitive deployments. For agent tasks that require processing a complete result set --- counting, filtering, aggregation, deduplication --- it is a reliability requirement when the result set exceeds a single tool response. Even if future models close the pagination gap through improved training or architecture, LRO would continue to provide token savings at scale.
 
 ### The Descriptor Paradox
 
-The E2 ablation reveals a paradox: the full descriptor (C1), designed to help agents navigate offloaded data, underperforms the bare pointer (C4). Three hypotheses were proposed:
+The E2 ablation reveals a paradox: the full descriptor (C1), designed to help agents navigate offloaded data, underperforms the bare pointer (C4). The paradox is best understood by decomposing the descriptor into three functional layers:
 
-1. **Distraction cost.** Rich descriptors induce agents to spend turns analyzing metadata before executing the simple operation that solves the task. The bare pointer eliminates this distraction.
-2. **Task-type dependency.** ID lookup tasks have a trivial extraction pattern (`grep` for UUIDs). More complex tasks (e.g., "find all incidents in namespace X with priority > 3 that mention product Y") should benefit from schema and recipe information that the agent cannot easily infer.
-3. **Training distribution.** Current models are trained on tool-use patterns where they receive data and process it directly. The descriptor pattern (receive metadata *about* data and decide how to access it) may require explicit training signal or prompting to elicit optimal behavior.
+1. **Access** --- file path + shell capability. This is the mechanism by which the agent reaches the data. Our results show access is both necessary (inline fails at 0--7%) and sufficient (bare pointer achieves 95.6%) for current tasks.
+2. **Metadata** --- schema definition, summary statistics, namespace distribution. This layer describes the data's structure and content. Our results show agents do not consume it: no descriptor configuration with metadata outperforms the bare pointer on either ID lookup or filter tasks.
+3. **Recipes** --- pre-computed `jq` extraction templates. This layer provides executable scaffolding. Our results show recipes are model-dependent: no benefit for capable models, +13--20pp for weaker ones (E3).
 
-**E4 directly tests hypothesis 2 and refutes it.** Multi-field filter tasks --- requiring namespace filtering, priority comparison, and content search in conjunction --- show identical accuracy across all descriptor configurations (12.9% for C1--C4). Schema and recipe metadata provide no measurable advantage even on tasks explicitly designed to benefit from them. The agent's strategy of inspecting file structure through exploratory shell commands is as effective as consuming pre-computed metadata, regardless of task complexity.
+Only layer (1) is empirically validated as contributing to task accuracy. Layers (2) and (3) are forward-looking scaffolding that may matter once models are trained to consume structured tool metadata.
 
-The guided prompting variant (E2g) refutes hypothesis 3 for ID lookup tasks: guided conditions do not outperform natural ones even with explicit coaching.
+**Behavioral evidence.** Agent traces illustrate the paradox concretely. Under the bare-pointer condition (C4), a typical agent trace proceeds directly to extraction:
 
-With hypotheses 2 and 3 refuted by evidence, hypothesis 1 (distraction cost) and a fourth possibility remain: agents have internalized sufficient knowledge of common data formats (JSON, JSONL) to navigate structured files without external schema.
+> *Turn 1:* Agent receives file path → *Turn 2:* `grep -c "UUID-1\|UUID-2\|..." /tmp/lro-recall-01ABC.jsonl` → *Turn 3:* Reports count. (3 turns total)
 
-**Prioritize the file reference and shell access.** Include descriptor metadata (schema, recipes, guidance) as forward-compatible scaffolding for models that may consume structured tool metadata more effectively, but do not treat it as a functional requirement. For current-generation models, the bare pointer is sufficient across both simple and complex task types.
+Under the full-descriptor condition (C1), the same task often unfolds differently:
+
+> *Turn 1:* Agent receives descriptor with schema, recipes, guidance → *Turn 2:* Agent reads `line_schema` fields → *Turn 3:* Agent reviews `jq_recipes` → *Turn 4:* Agent issues the same `grep -c` command it would have issued without the descriptor → *Turn 5:* Reports count. (5 turns, 2 wasted on metadata inspection)
+
+The additional metadata induces the agent to spend turns analyzing information it does not ultimately use, delaying the straightforward shell command that solves the task.
+
+**Hypothesis testing.** Three hypotheses were proposed: (1) distraction cost from rich descriptors, (2) task-type dependency (complex tasks should benefit from metadata), and (3) training distribution mismatch. E4 directly tests and refutes hypothesis 2: multi-field filter tasks show identical 12.9% accuracy across all descriptor configurations. The guided prompting variant (E2g) refutes hypothesis 3: guided conditions do not outperform natural ones even with explicit coaching. With hypotheses 2 and 3 refuted, the evidence supports hypothesis 1 (distraction cost) combined with a fourth possibility: agents have internalized sufficient knowledge of common data formats (JSON, JSONL) to navigate structured files without external schema.
 
 ### Recipe Utility as Capability Scaffolding
 
@@ -483,35 +513,39 @@ For descriptor design, this implies adaptive recipe inclusion: implementations c
 
 ### Limitations
 
-**Task-type coverage.** The evaluation covers ID lookup (counting UUIDs matching known targets) and multi-field filtering (conjunction queries over namespace, priority, and content). Filter tasks in E4 extend beyond the narrow ID lookup case and show that the descriptor paradox holds across task complexity levels. Additional task types --- cross-record aggregation, temporal reasoning, multi-hop entity resolution --- would extend generalizability. The 12.9% accuracy on filter tasks identifies a capability frontier for future evaluation.
+**Task-type coverage.** The evaluation covers ID lookup (counting UUIDs matching known targets) and multi-field filtering (conjunction queries over namespace, priority, and content). Filter tasks in E4 extend beyond the narrow ID lookup case and show that the descriptor paradox holds across task complexity levels. Additional task types --- cross-record aggregation, temporal reasoning, multi-hop entity resolution --- would extend generalizability. The 12.9% accuracy on filter tasks identifies a capability frontier rather than a dead end: the failure taxonomy (Section 6.4) shows that agents fail at query composition, not data discovery. Two promising research directions emerge: (1) *descriptor-aware training*, where models are fine-tuned on structured tool metadata consumption patterns, and (2) a *query-planner tool* that accepts natural language filter criteria and emits correct `jq` expressions, decomposing the compositional barrier into a specialized tool call rather than requiring the agent to synthesize complex shell pipelines directly.
 
 **Scale constraints.** The inline baseline is untestable beyond approximately n = 50 records because context overflow prevents completion. This is by design (LRO exists because inline fails at scale), but it means the LRO vs. inline accuracy comparison is only meaningful at small n, where LRO's advantage is already decisive.
 
-**Two-model coverage.** The evaluation uses two models (Haiku 4.5, GPT-5-mini) spanning different capability levels and providers. Broader coverage --- open-source models, larger frontier models --- would extend generalizability.
+**Two-model coverage.** The evaluation uses two models (Haiku 4.5, GPT-5-mini) spanning different capability levels and providers. Both are mid-tier commercial models; frontier models with superior long-context capabilities and open-weight models may exhibit different pagination behavior. Broader coverage would extend generalizability.
+
+**Domain generalization.** Our evaluation is limited to memory-style structured records. We hypothesize that LRO applies to search results, log queries, API response aggregations, and multi-agent shared state, but these domains are entirely untested and remain hypotheses for future work.
 
 **Practitioner references.** References [4, 6, 10, 14, 17] are practitioner blog posts rather than peer-reviewed publications, cited for empirical observations and production patterns not yet formalized in the literature. Conceptual claims rest on peer-reviewed work [1--3, 5, 7--9, 11--13, 15--16, 19--24] and our own evaluation.
 
 ## Specification and Implementation
 
-LRO is specified as an open protocol-level pattern for MCP-compatible memory servers with three graduated conformance levels (Basic, Standard, Full; see Appendix F for details). Configuration is managed via a `[prompt.offload]` section with parameters for threshold ($\tau$), TTL, and output directory. The complete specification, including configuration schema and conformance requirements, is available in the [lro-bench repository](https://github.com/zircote/lro-bench).
+LRO is specified as an open protocol-level pattern for MCP-compatible memory servers with three graduated conformance levels (Basic, Standard, Full; see Appendix F for details). Level 1 (Basic) --- threshold detection, JSONL materialization, file reference and summary statistics --- is what the empirical evaluation validates. Levels 2--3 add schema definitions, extraction queries, custodial cleanup, and observability; these are operational best practices whose incremental value over Level 1 is not demonstrated by the current evaluation (consistent with the descriptor paradox finding). Configuration is managed via a `[prompt.offload]` section with parameters for threshold ($\tau$), TTL, and output directory. The complete specification, including configuration schema and conformance requirements, is available in the [lro-bench repository](https://github.com/zircote/lro-bench).
 
 The benchmark harness, task suites, and evaluation scripts used in Section 6 are open-source at [github.com/zircote/lro-bench](https://github.com/zircote/lro-bench).
 
 ## Conclusion
 
-Large Result Offloading addresses the mismatch between retrieval output cardinality and downstream consumption requirements in tool-augmented language model systems. The evaluation establishes that this mismatch is a capability boundary, not only a cost concern. Inline delivery of large result sets fails at 0--7% accuracy for whole-corpus operations --- a result that persists even when the agent is given a persistent Python execution environment (0% accuracy) --- while LRO achieves 73--100% accuracy on ID lookup tasks across two models and three corpus scales.
+Large Result Offloading addresses the mismatch between retrieval output cardinality and downstream consumption requirements in tool-augmented language model systems. The evaluation establishes that pagination-induced state loss is architecturally fragile under current transformer-plus-tools patterns, not merely a cost concern. Inline delivery of large result sets fails at 0--7% accuracy for whole-corpus operations --- a result that persists even when the agent is given a persistent Python execution environment (0% accuracy) --- while LRO achieves 73--100% accuracy on ID lookup tasks across two models and three corpus scales.
 
 The contribution is fourfold:
 
-1. **Task enablement over cost optimization.** LRO enables operations that are architecturally fragile under inline delivery. Token savings of 40--62% at scale are a secondary benefit; the primary contribution is eliminating pagination-induced state loss.
+1. **Architectural repair over cost optimization.** LRO eliminates pagination-induced state loss, a robust failure mode that is not remediated by providing computational tools. Token savings of 40--62% at scale are a secondary benefit. The pagination failure may be addressable through future architectural or training-level interventions (scratchpad training, extended working memory, tool-use fine-tuning), at which point LRO's value shifts to pure cost optimization.
 
-2. **The descriptor paradox.** The compact descriptor was designed as a typed API between the retrieval and reasoning subsystems. Ablation across two task types (ID lookup and multi-field filtering) reveals that a bare file pointer performs as well as a full descriptor under current model behavior. The finding holds across task complexity: even on multi-criteria filter tasks explicitly designed to benefit from schema and recipe metadata, no descriptor configuration outperforms the bare pointer. For current models, file access and shell capability are sufficient; structured metadata may matter for future models trained to consume it.
+2. **The descriptor paradox and a design guideline.** The compact descriptor was designed as a typed API between the retrieval and reasoning subsystems. Ablation across two task types (ID lookup and multi-field filtering) reveals that a bare file pointer performs as well as a full descriptor under current model behavior. The finding holds across task complexity: even on multi-criteria filter tasks explicitly designed to benefit from schema and recipe metadata, no descriptor configuration outperforms the bare pointer. **Design guideline:** For current models, prioritize file access and shell capability; treat rich descriptors (schema, recipes, guidance) as optional forward-compatible scaffolding that will matter only once models are trained to consume structured tool metadata.
 
-3. **Task complexity as the frontier.** Filter tasks requiring multi-criteria conjunction queries (namespace filtering, priority comparison, content search) achieve only 12.9% accuracy across all LRO conditions, compared to 84--96% on ID lookup tasks. The difficulty is not in accessing the data (LRO solves that) but in composing correct multi-predicate queries. This identifies compositional query construction as the next capability boundary for tool-augmented agents.
+3. **Task complexity as the capability frontier.** Filter tasks requiring multi-criteria conjunction queries (namespace filtering, priority comparison, content search) achieve only 12.9% accuracy across all LRO conditions, compared to 84--96% on ID lookup tasks. LRO restores access but not competence: the difficulty is in composing correct multi-predicate queries, not in discovering or reaching the data. This identifies compositional query construction --- and potential mitigations such as descriptor-aware training or query-planner tools --- as a research agenda for tool-augmented agents.
 
 4. **Model-dependent scaffolding.** Extraction recipes provide no benefit for capable models but improve goal achievement by 13--20 percentage points for weaker ones. Descriptor richness should adapt to model capability.
 
-The descriptor pattern extends beyond memory retrieval. As tool protocols like MCP mature, structuring tool output for agent consumption becomes a first-class design concern. Search results, log queries, API response aggregations, and multi-agent shared state all face the same context allocation trade-off. LRO's formalization --- materialization, structured descriptor, extraction interface --- applies to any tool whose output exceeds what the consuming model needs in context.
+The descriptor pattern may extend beyond memory retrieval. As tool protocols like MCP mature, structuring tool output for agent consumption becomes a first-class design concern. We hypothesize that search results, log queries, API response aggregations, and multi-agent shared state face the same context allocation trade-off, but our evaluation is limited to memory-style records and generalization to these domains remains untested.
+
+We release lro-bench, an open benchmark and reference implementation for evaluating tool-result delivery strategies. Current long-context benchmarks focus on retrieval quality; lro-bench evaluates the delivery mechanism for results after retrieval completes, providing a drop-in harness for evaluating new context management methods (compression, improved function calling, alternative materialization formats).
 
 ---
 
