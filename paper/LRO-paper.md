@@ -276,7 +276,7 @@ The Inline+Code strategy provides a stronger baseline motivated by CodeAct [12]:
 
 **Results:**
 
-![Figure 1. E1 count accuracy across four strategies at three corpus scales. LRO dominates at all scales; inline collapses to 0--7%. Dashed line: 70% acceptance threshold.](figures/fig2_count_accuracy_by_strategy.png)
+![Figure 1. E1 count accuracy across four strategies at three corpus scales. LRO dominates at all scales; inline collapses to 0--7%. Dashed line: 70% acceptance threshold.](../public/figures/fig2_count_accuracy_by_strategy.png)
 
 **Table 3.** E1 count accuracy (%) by strategy, scale, and model.
 
@@ -300,7 +300,7 @@ The Inline+Code strategy provides a stronger baseline motivated by CodeAct [12]:
 | Summary | 83 | 67 | 206 | 233 | 315 | 474 |
 | Truncation | 662 | 507 | 245 | 150 | 233 | 158 |
 
-![Figure 2. LRO/Inline API token ratio by corpus scale. Values below 1.0 indicate LRO saves tokens. Savings grow with corpus size; at n=50, Haiku LRO has slight overhead (1.28x).](figures/fig1_token_ratio_by_scale.png)
+![Figure 2. LRO/Inline API token ratio by corpus scale. Values below 1.0 indicate LRO saves tokens. Savings grow with corpus size; at n=50, Haiku LRO has slight overhead (1.28x).](../public/figures/fig1_token_ratio_by_scale.png)
 
 **Table 5.** E1 LRO/Inline token ratio by scale.
 
@@ -310,7 +310,7 @@ The Inline+Code strategy provides a stronger baseline motivated by CodeAct [12]:
 | n=200 | 0.57x | 0.42x | 43% | 58% |
 | n=500 | 0.38x | 0.41x | 62% | 59% |
 
-![Figure 3. E1 access ratio (k/n) for LRO arm. Agents read 0--2% of offloaded records across all scales.](figures/fig3_access_ratio.png)
+![Figure 3. E1 access ratio (k/n) for LRO arm. Agents read 0--2% of offloaded records across all scales.](../public/figures/fig3_access_ratio.png)
 
 **Access ratio:** LRO agents read 0--2% of offloaded records ($k/n$ = 0.000--0.021), well below the 10% threshold. File-write overhead was 23.9ms, negligible relative to API latency.
 
@@ -342,7 +342,7 @@ All LRO conditions (C1--C4) receive identical system prompts; only the descripto
 
 **Results:**
 
-![Figure 4. E2 descriptor ablation heatmap. Count accuracy by condition and scale for both models. C1--C4 (LRO variants) perform well; C5 (inline) fails. C4 bare pointer matches or exceeds C1 full descriptor.](figures/fig4_descriptor_ablation.png)
+![Figure 4. E2 descriptor ablation heatmap. Count accuracy by condition and scale for both models. C1--C4 (LRO variants) perform well; C5 (inline) fails. C4 bare pointer matches or exceeds C1 full descriptor.](../public/figures/fig4_descriptor_ablation.png)
 
 **Table 6.** E2 count accuracy (%) by condition, scale, and model.
 
@@ -373,7 +373,7 @@ The critical factor is file access combined with shell capability. All four LRO 
 
 C5 (inline) fails completely, confirming E1's finding.
 
-![Figure 5. C1 (Full LRO) vs C5 (Inline) token ratio across scales.](figures/fig5_e2_token_ratio.png)
+![Figure 5. C1 (Full LRO) vs C5 (Inline) token ratio across scales.](../public/figures/fig5_e2_token_ratio.png)
 
 **Guided prompting variant (E2g).** To distinguish "descriptors are useless" from "agents don't consume descriptors," we ran a parallel set of four guided conditions (C1g--C4g) with identical descriptor content but an extended system prompt requiring the agent to consult `line_schema`, scan `jq_recipes`, and follow `guidance` before querying. The guided conditions show marginal accuracy differences from their natural counterparts; guided prompting does not meaningfully change the outcome for this task class. The bare pointer remains competitive even when agents are coached to use descriptor metadata.
 
@@ -393,7 +393,7 @@ C5 (inline) fails completely, confirming E1's finding.
 | Recipe | 93.3 | 73.3 | 86.7 | 100.0 | 73.3 | 93.3 |
 | NoRecipe | 93.3 | 86.7 | 86.7 | 93.3 | 100.0 | 86.7 |
 
-![Figure 6. E3 goal achievement by condition and scale. Haiku achieves near-100% in both conditions; GPT-5-mini shows a recipe advantage of +13--20pp.](figures/fig6_e3_goal_achievement.png)
+![Figure 6. E3 goal achievement by condition and scale. Haiku achieves near-100% in both conditions; GPT-5-mini shows a recipe advantage of +13--20pp.](../public/figures/fig6_e3_goal_achievement.png)
 
 **Table 9.** E3 goal achievement (%): fraction of extraction queries using library-aligned patterns.
 
